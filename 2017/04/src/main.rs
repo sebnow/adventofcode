@@ -31,7 +31,10 @@ fn answer<R: BufRead>(reader: R) -> Answer {
 }
 
 fn main() {
-    println!("Hello, world!");
+    let file = File::open("input.txt").unwrap();
+    let reader = BufReader::new(file);
+
+    println!("{:?}", answer(reader))
 }
 
 #[cfg(test)]
