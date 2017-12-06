@@ -4,6 +4,14 @@ struct Answer {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+enum Side {
+    Right,
+    Top,
+    Left,
+    Bottom,
+}
+
+#[derive(Debug, Eq, PartialEq)]
 struct Point(i32, i32);
 
 impl Point {
@@ -17,7 +25,24 @@ impl Point {
 
 impl From<i32> for Point {
     fn from(x: i32) -> Self {
-        Point(0, 0)
+        let closest_integral = (x as f32).sqrt().ceil();
+        let is_top_right = (closest_integral as i32) % 2 == 0;
+
+        let grid_size = if is_top_right { closest_integral + 1.0 } else { closest_integral } as i32;
+        let grid_max = grid_size * grid_size;
+
+        let side = if x > grid_max - grid_size { Side::Bottom }
+            else if x > grid_max - (grid_size * 2) + 1 { Side::Left }
+            else if x > grid_max - (grid_size * 3) + 2 { Side::Top }
+            else  { Side::Right };
+
+        let ring = (grid_size as f32).sqrt().ceil() as i32;
+        match side {
+            Side::Right => Point(ring, 0),
+            Side::Top => Point(0, ring),
+            Side::Left => Point(0-ring, 0),
+            Side::Bottom => Point(0, 0-ring),
+        }
     }
 }
 
