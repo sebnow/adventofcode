@@ -1,9 +1,9 @@
 #[derive(Eq, PartialEq, Debug)]
-pub struct Bank([i32; 4]);
+pub struct Bank([i32; 16]);
 
 impl Bank {
-    pub fn new(a: i32, b: i32, c: i32, d: i32) -> Self {
-        Bank([a, b, c, d])
+    pub fn new(arr: [i32; 16]) -> Self {
+        Bank(arr)
     }
 
     pub fn redistribute(&self) -> Self {

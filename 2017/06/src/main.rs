@@ -16,7 +16,12 @@ fn redistributions(bank: Bank) -> i32 {
 }
 
 fn main() {
-    println!("{0}", redistributions(Bank::new(0, 2, 7, 0)));
+    println!(
+        "{0}",
+        redistributions(Bank::new(
+            [5, 1, 10, 0, 1, 7, 13, 14, 3, 12, 8, 10, 7, 12, 0, 6],
+        ))
+    );
 }
 
 #[cfg(test)]
@@ -26,7 +31,7 @@ mod tests {
 
     #[test]
     fn example() {
-        let bank = Bank::new(0, 2, 7, 0);
+        let bank = Bank::new([0, 2, 7, 0]);
         assert_eq!(redistributions(bank), 5);
     }
 }
