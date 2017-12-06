@@ -13,7 +13,7 @@ fn answer_with_input(input: &mut [i32]) -> Answer {
         let idx = pos as usize;
         let jump = input[idx];
 
-        input[idx] += 1;
+        input[idx] += if jump >= 3 {-1} else {1};
         pos += jump;
         steps += 1;
     }
@@ -106,6 +106,6 @@ mod tests {
     #[test]
     fn example() {
         let mut input = [0, 3, 0, 1, -3];
-        assert_eq!(answer_with_input(&mut input), Answer{steps: 5});
+        assert_eq!(answer_with_input(&mut input), Answer{steps: 10});
     }
 }
