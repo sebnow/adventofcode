@@ -7,16 +7,25 @@ struct Answer {
     count: i32,
 }
 
+fn normalize(word: &str) -> Vec<char> {
+    let mut chars: Vec<char> = word.chars().collect();
+    chars.sort_unstable();
+
+    chars
+}
+
 fn is_valid(passphrase: &str) -> bool {
-    let mut map: HashMap<&str, ()> = HashMap::new();
+    let mut map: HashMap<Vec<char>, ()> = HashMap::new();
     let words = passphrase.split_whitespace();
 
     for word in words {
-        if map.contains_key(word) {
+        let normalized = normalize(word);
+
+        if map.contains_key(&normalized) {
             return false
         }
 
-        map.insert(word, ());
+        map.insert(normalized, ());
     }
 
     true
