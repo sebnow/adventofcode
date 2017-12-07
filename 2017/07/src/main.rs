@@ -5,7 +5,13 @@ use std::fs::File;
 use regex::Regex;
 
 #[derive(Debug, PartialEq, Eq)]
-struct InputLine((String, i32), Vec<String>);
+struct Program {
+    name: String,
+    weight: i32,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct InputLine(Program, Vec<String>);
 
 fn parse_leafs(input: &str) -> Vec<String> {
     input.split(", ").map(|x| x.to_owned()).collect()
@@ -22,7 +28,13 @@ fn parse_input<R: BufRead>(reader: R) -> Vec<InputLine> {
             let weight: i32 = caps.get(2).unwrap().as_str().parse().unwrap();
             let leafs = caps.get(3).map_or(vec![], |x| parse_leafs(x.as_str()));
 
-            InputLine((name.to_owned(), weight), leafs)
+            InputLine(
+                Program {
+                    name: name.to_owned(),
+                    weight: weight,
+                },
+                leafs,
+            )
         })
         .collect()
 }
@@ -58,7 +70,10 @@ mod test {
             parse_input(reader),
             vec![
                 InputLine(
-                    (String::from("dsad"), 10),
+                    Program {
+                        name: String::from("dsad"),
+                        weight: 10,
+                    },
                     vec![
                         String::from("ewq"),
                         String::from("tre"),
