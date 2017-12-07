@@ -1,72 +1,43 @@
 extern crate regex;
+mod tower;
 
 use std::io::{BufRead, BufReader};
 use std::fs::File;
-use std::collections::HashSet;
 use regex::Regex;
-
-#[derive(Debug, PartialEq, Eq)]
-struct Program {
-    name: String,
-    weight: i32,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-struct InputLine(Program, Vec<String>);
+use tower::{Program, Tower};
 
 fn parse_leafs(input: &str) -> Vec<String> {
     input.split(", ").map(|x| x.to_owned()).collect()
 }
 
-fn parse_input<R: BufRead>(reader: R) -> Vec<InputLine> {
+fn track_from_input<R: BufRead>(tower: &mut Tower, reader: R) {
+    let mut links: Vec<(String, String)> = vec![];
     let re = Regex::new(r"^(\w+) \((\d+)\)(?: -> ((?:\w+)(?:, (?:\w+))*))?$").unwrap();
-    reader
-        .lines()
-        .map(|l| l.unwrap())
-        .map(|l| {
-            let caps = re.captures(&l).unwrap();
-            let name = caps.get(1).unwrap().as_str();
-            let weight: i32 = caps.get(2).unwrap().as_str().parse().unwrap();
-            let leafs = caps.get(3).map_or(vec![], |x| parse_leafs(x.as_str()));
 
-            InputLine(
-                Program {
-                    name: name.to_owned(),
-                    weight: weight,
-                },
-                leafs,
-            )
-        })
-        .collect()
-}
+    for l in reader.lines().map(|l| l.unwrap()) {
+        let caps = re.captures(&l).unwrap();
+        let name = caps.get(1).unwrap().as_str();
+        let weight: i32 = caps.get(2).unwrap().as_str().parse().unwrap();
+        let leafs = caps.get(3).map_or(vec![], |x| parse_leafs(x.as_str()));
 
-fn find_root(input: &Vec<InputLine>) -> Option<&Program> {
-    let mut leafs: HashSet<&str> = HashSet::with_capacity(input.len());
-    for line in input {
-        for leaf in &line.1 {
-            leafs.insert(leaf);
+        tower.add(Program::new(name.to_owned(), weight));
+        for leaf in leafs {
+            links.push((name.to_owned(), leaf));
         }
     }
 
-    for line in input {
-        if !leafs.contains(line.0.name.as_str()) {
-            return Some(&line.0);
-        }
+    for (parent, child) in links {
+        tower.link(&parent, &child)
     }
-
-    None
-}
-
-fn answer1<R: BufRead>(reader: R) -> String {
-    let inputs = parse_input(reader);
-    let root = find_root(&inputs).unwrap();
-    root.name.clone()
 }
 
 fn main() {
+    let mut tower = Tower::new();
     let file = File::open("input.txt").unwrap();
     let reader = BufReader::new(file);
-    println!("Answer 1: {:?}", answer1(reader));
+    track_from_input(&mut tower, reader);
+
+    println!("Answer 1: {:?}", tower.root().unwrap().name);
 }
 
 #[cfg(test)]
@@ -78,31 +49,11 @@ mod test {
 
     #[test]
     fn test_example_part_1() {
+        let mut tower = Tower::new();
         let file = File::open("example1.txt").unwrap();
         let reader = BufReader::new(file);
+        track_from_input(&mut tower, reader);
 
-        assert_eq!(answer1(reader), String::from("tknk"))
-    }
-
-    #[test]
-    fn test_parse_input() {
-        let reader = Cursor::new("dsad (10) -> ewq, tre, vcx");
-
-        assert_eq!(
-            parse_input(reader),
-            vec![
-                InputLine(
-                    Program {
-                        name: String::from("dsad"),
-                        weight: 10,
-                    },
-                    vec![
-                        String::from("ewq"),
-                        String::from("tre"),
-                        String::from("vcx"),
-                    ]
-                ),
-            ]
-        );
+        assert_eq!(tower.root().unwrap().name, String::from("tknk"))
     }
 }
