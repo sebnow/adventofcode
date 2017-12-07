@@ -2,6 +2,7 @@ extern crate regex;
 
 use std::io::{BufRead, BufReader};
 use std::fs::File;
+use std::collections::HashSet;
 use regex::Regex;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -39,13 +40,33 @@ fn parse_input<R: BufRead>(reader: R) -> Vec<InputLine> {
         .collect()
 }
 
+fn find_root(input: &Vec<InputLine>) -> Option<&Program> {
+    let mut leafs: HashSet<&str> = HashSet::with_capacity(input.len());
+    for line in input {
+        for leaf in &line.1 {
+            leafs.insert(leaf);
+        }
+    }
+
+    for line in input {
+        if !leafs.contains(line.0.name.as_str()) {
+            return Some(&line.0);
+        }
+    }
+
+    None
+}
+
 fn answer1<R: BufRead>(reader: R) -> String {
     let inputs = parse_input(reader);
-    String::from("")
+    let root = find_root(&inputs).unwrap();
+    root.name.clone()
 }
 
 fn main() {
-    println!("Hello, world!");
+    let file = File::open("input.txt").unwrap();
+    let reader = BufReader::new(file);
+    println!("Answer 1: {:?}", answer1(reader));
 }
 
 #[cfg(test)]
@@ -63,6 +84,7 @@ mod test {
         assert_eq!(answer1(reader), String::from("tknk"))
     }
 
+    #[test]
     fn test_parse_input() {
         let reader = Cursor::new("dsad (10) -> ewq, tre, vcx");
 
