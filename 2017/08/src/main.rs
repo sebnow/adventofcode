@@ -3,7 +3,44 @@ use std::io::Read;
 use std::collections::HashMap;
 
 fn process(input: &str) -> HashMap<&str, i32> {
-    HashMap::new()
+    let mut registers = HashMap::new();
+    for instr in input.lines() {
+        let default = 0;
+        let mut tokens = instr.split_whitespace();
+        let register = tokens.next().unwrap();
+        let cmd = tokens.next().unwrap();
+        let amount = tokens.next().unwrap().parse::<i32>().unwrap();
+        tokens.next().unwrap();
+        let target_register = tokens.next().unwrap();
+        let cmp = tokens.next().unwrap();
+        let bounds = tokens.next().unwrap().parse::<i32>().unwrap();
+
+        let &target_value = registers.get(target_register).unwrap_or(&default);
+        let cond = match cmp {
+            ">" => target_value > bounds,
+            ">=" => target_value >= bounds,
+            "<" => target_value < bounds,
+            "<=" => target_value <= bounds,
+            "==" => target_value == bounds,
+            "!=" => target_value != bounds,
+            _ => false,
+        };
+
+        if !cond {
+            continue;
+        }
+
+        let &value = registers.get(register).unwrap_or(&default);
+        let new_value = match cmd {
+            "inc" => value + amount,
+            "dec" => value - amount,
+            _ => value,
+        };
+
+        registers.insert(register, new_value);
+    }
+
+    registers
 }
 
 fn answer_1(input: &str) -> i32 {
