@@ -11,7 +11,7 @@ fn answer_1(size: usize, input: &[usize]) -> i32 {
 }
 
 fn main() {
-    println!("Hello, world!");
+    println!("Part 1: {:?}", answer_1(256, &[206, 63, 255, 131, 65, 80, 238, 157, 254, 24, 133, 2, 16, 0, 1, 3]));
 }
 
 #[cfg(test)]
