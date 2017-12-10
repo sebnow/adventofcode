@@ -2,8 +2,12 @@
 #[macro_use]
 extern crate quickcheck;
 
+mod stringcircle;
+use stringcircle::StringCircle;
+
 fn answer_1(size: usize, input: &[usize]) -> i32 {
-    0
+    let mut circle = StringCircle::new(size);
+    circle.hash(input)
 }
 
 fn main() {
