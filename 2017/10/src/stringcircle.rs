@@ -1,5 +1,3 @@
-use std::fmt;
-
 #[derive(Debug, Eq, PartialEq)]
 pub struct StringCircle {
     knots: Vec<i32>,
@@ -8,7 +6,11 @@ pub struct StringCircle {
 }
 
 impl StringCircle {
-    pub fn new(size: usize) -> Self {
+    pub fn new() -> Self {
+        Self::with_size(256)
+    }
+
+    pub fn with_size(size: usize) -> Self {
         StringCircle {
             knots: (0..(size as i32)).collect(),
             pos: 0,
@@ -29,9 +31,17 @@ impl StringCircle {
 
         self.knots[0] * self.knots[1]
     }
+
+    pub fn dense_hash(&self) -> Vec<i32> {
+        let size = self.knots.len() / 16;
+        (0..size)
+            .map(|x| x * 16)
+            .map(|idx| xor_slice(&self.knots[idx..idx + 16]))
+            .collect()
+    }
 }
 
-fn circular_reverse<T: fmt::Debug>(slice: &mut [T], start: usize, end: usize) -> &[T] {
+fn circular_reverse<T>(slice: &mut [T], start: usize, end: usize) -> &[T] {
     let len = slice.len();
     if len <= 1 {
         return slice
@@ -43,6 +53,11 @@ fn circular_reverse<T: fmt::Debug>(slice: &mut [T], start: usize, end: usize) ->
     }
 
     slice
+}
+
+#[inline]
+fn xor_slice(slice: &[i32]) -> i32 {
+    slice.iter().fold(0, |acc, &x| acc ^ x)
 }
 
 #[inline]
@@ -66,7 +81,7 @@ mod test {
 
     #[test]
     fn hash() {
-        let mut string = StringCircle::new(5);
+        let mut string = StringCircle::with_size(5);
         assert_eq!(string.hash(&[3, 4, 1, 5]), 12);
     }
 

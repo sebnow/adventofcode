@@ -6,7 +6,7 @@ mod stringcircle;
 use stringcircle::StringCircle;
 
 fn answer_1(size: usize, input: &[usize]) -> i32 {
-    let mut circle = StringCircle::new(size);
+    let mut circle = StringCircle::with_size(size);
     circle.hash(input)
 }
 
@@ -23,7 +23,8 @@ fn answer_2(input: &str) -> String {
         circle.hash(&lengths);
     }
 
-    String::from("")
+    let hash = circle.dense_hash();
+    hash.iter().map(|x| format!("{:02x}", x)).collect()
 }
 
 fn main() {
