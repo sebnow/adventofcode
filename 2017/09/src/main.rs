@@ -4,16 +4,36 @@ use std::io::Read;
 fn score(input: &str) -> i32 {
     let mut scores = vec![];
     let mut depth = 1;
+    let mut is_cancelled = false;
+    let mut is_garbage = false;
 
     for c in input.chars() {
+        if is_cancelled {
+            is_cancelled = false;
+            continue;
+        }
+
         match c {
             '{' => {
-                scores.push(depth);
-                depth += 1;
+                if !is_garbage {
+                    scores.push(depth);
+                    depth += 1;
+                }
             },
             '}' => {
-                depth -= 1;
+                if !is_garbage {
+                    depth -= 1;
+                }
             },
+            '<' => {
+                is_garbage = true;
+            },
+            '>' => {
+                is_garbage = false;
+            },
+            '!' => {
+                is_cancelled = !is_cancelled;
+            }
             _ => {}
         }
     }
