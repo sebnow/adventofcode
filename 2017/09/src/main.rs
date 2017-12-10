@@ -2,7 +2,23 @@ use std::fs::File;
 use std::io::Read;
 
 fn score(input: &str) -> i32 {
-    0
+    let mut scores = vec![];
+    let mut depth = 1;
+
+    for c in input.chars() {
+        match c {
+            '{' => {
+                scores.push(depth);
+                depth += 1;
+            },
+            '}' => {
+                depth -= 1;
+            },
+            _ => {}
+        }
+    }
+
+    scores.iter().sum()
 }
 
 fn answer_1() -> i32 {
