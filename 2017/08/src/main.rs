@@ -1,8 +1,10 @@
 use std::fs::File;
 use std::io::Read;
 use std::collections::HashMap;
+use std::cmp;
 
-fn process(input: &str) -> HashMap<&str, i32> {
+fn process(input: &str) -> (HashMap<&str, i32>, i32) {
+    let mut max_value = 0;
     let mut registers = HashMap::new();
     for instr in input.lines() {
         let default = 0;
@@ -37,14 +39,15 @@ fn process(input: &str) -> HashMap<&str, i32> {
             _ => value,
         };
 
+        max_value = cmp::max(max_value, new_value);
         registers.insert(register, new_value);
     }
 
-    registers
+    (registers, max_value)
 }
 
-fn answer_1(input: &str) -> i32 {
-    *process(input).values().max().unwrap_or(&0)
+fn answer_1(registers: &HashMap<&str, i32>) -> i32 {
+    *registers.values().max().unwrap_or(&0)
 }
 
 fn main() {
@@ -52,7 +55,9 @@ fn main() {
     let mut file = File::open("input.txt").unwrap();
     file.read_to_string(&mut input).unwrap();
 
-    println!("Part 1: {:?}", answer_1(&input));
+    let result = process(&input);
+    println!("Part 1: {:?}", answer_1(&result.0));
+    println!("Part 2: {:?}", result.1);
 }
 
 #[cfg(test)]
@@ -62,7 +67,14 @@ mod test {
     #[test]
     fn examples_1() {
         let input = "b inc 5 if a > 1\na inc 1 if b < 5\nc dec -10 if a >= 1\nc inc -20 if c == 10";
-        assert_eq!(answer_1(input), 1);
+        let result = process(&input);
+        assert_eq!(answer_1(&result.0), 1);
     }
 
+    #[test]
+    fn examples_2() {
+        let input = "b inc 5 if a > 1\na inc 1 if b < 5\nc dec -10 if a >= 1\nc inc -20 if c == 10";
+        let result = process(&input);
+        assert_eq!(result.1, 10);
+    }
 }
