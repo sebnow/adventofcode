@@ -1,0 +1,6 @@
+[package]
+authors = ["Sebastian Nowicki <sebnow@gmail.com>"]
+name = "adventofcode201710"
+version = "0.1.0"
+[dev-dependencies]
+quickcheck = "0.5.0"
