@@ -21,21 +21,37 @@ fn step((x, y, z): CubeCoord, dir: &str) -> CubeCoord {
     }
 }
 
-fn answer_1<R: BufRead>(reader: R) -> i32 {
-    let origin = (0, 0, 0);
-    cube_distance(origin, reader
+fn parse_steps<R: BufRead>(reader: R) -> Vec<CubeCoord> {
+    let mut steps = vec![(0, 0, 0)];
+    let dirs = reader
         .split(b',')
-        .map(|x| String::from_utf8(x.unwrap()).unwrap().trim().to_owned())
-        .fold(origin, |pos, dir| step(pos, dir.as_str())))
+        .map(|x| String::from_utf8(x.unwrap()).unwrap().trim().to_owned());
+
+    for dir in dirs {
+        let &last = steps.last().unwrap();
+        steps.push(step(last, dir.as_str()));
+    }
+
+    steps
+}
+
+fn answer_1(steps: &Vec<CubeCoord>) -> i32 {
+    cube_distance(*steps.first().unwrap(), *steps.last().unwrap())
+}
+
+fn answer_2(steps: &Vec<CubeCoord>) -> i32 {
+    let origin = (0, 0, 0);
+    steps.iter().map(|&step| cube_distance(origin, step)).max().unwrap()
 }
 
 fn main() {
     let file = File::open("input.txt").unwrap();
     let reader = BufReader::new(file);
+    let steps = parse_steps(reader);
 
-    println!("Part 1: {:?}", answer_1(reader))
+    println!("Part 1: {:?}", answer_1(&steps));
+    println!("Part 2: {:?}", answer_2(&steps));
 }
-
 
 #[cfg(test)]
 mod test {
@@ -44,9 +60,9 @@ mod test {
 
     #[test]
     fn example_answer() {
-        assert_eq!(answer_1(Cursor::new("ne,ne,ne")), 3);
-        assert_eq!(answer_1(Cursor::new("ne,ne,sw,sw")), 0);
-        assert_eq!(answer_1(Cursor::new("ne,ne,s,s")), 2);
-        assert_eq!(answer_1(Cursor::new("se,sw,se,sw,sw")), 3);
+        assert_eq!(answer_1(&parse_steps(Cursor::new("ne,ne,ne"))), 3);
+        assert_eq!(answer_1(&parse_steps(Cursor::new("ne,ne,sw,sw"))), 0);
+        assert_eq!(answer_1(&parse_steps(Cursor::new("ne,ne,s,s"))), 2);
+        assert_eq!(answer_1(&parse_steps(Cursor::new("se,sw,se,sw,sw"))), 3);
     }
 }
