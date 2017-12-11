@@ -1,43 +1,31 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
-fn parse_input<R: BufRead>(reader: R) -> Vec<u8> {
-    let mut input: Vec<u8> = reader
+fn parse_input<R: BufRead>(reader: R) -> Vec<i32> {
+    reader
         .bytes()
         .map(|x| x.unwrap())
-        .filter_map(|x| if x > 48 {Some(x - 48)} else {None})
-        .collect();
-
-    let first = input[0];
-    input.push(first);
-
-    input
+        .filter_map(|x| if x >= b'0' {Some((x - b'0') as i32)} else {None})
+        .collect()
 }
 
-fn answer_1(input: &[u8]) -> i32 {
-    let mut dupes = Vec::new();
-    let mut current = input[0];
-    let mut sum: i32 = 0;
-
-    for &x in input.iter().skip(1) {
-        if x == current {
-            sum += x as i32;
-        } else {
-            dupes.push(sum);
-            sum = 0;
-            current = x;
-        }
-    }
-
-    if sum > 0 {
-        dupes.push(sum);
-    }
-
-    dupes.iter().sum()
+fn sum_dupe(xs: &[i32], skip: usize) -> i32 {
+    let lookahead = xs.iter().cycle().skip(skip);
+    xs.iter()
+        .zip(lookahead)
+        .filter_map(|(a, b)| match a == b {
+            true => Some(a),
+            false => None,
+        })
+        .sum()
 }
 
-fn answer_2(input: &[u8]) -> i32 {
-    0
+fn answer_1(input: &[i32]) -> i32 {
+    sum_dupe(input, 1)
+}
+
+fn answer_2(input: &[i32]) -> i32 {
+    sum_dupe(input, input.len() / 2)
 }
 
 fn main() {
@@ -60,5 +48,14 @@ mod test {
         assert_eq!(answer_1(&parse_input(Cursor::new("1111"))), 4);
         assert_eq!(answer_1(&parse_input(Cursor::new("1234"))), 0);
         assert_eq!(answer_1(&parse_input(Cursor::new("91212129"))), 9);
+    }
+
+    #[test]
+    fn example_answer_2() {
+        assert_eq!(answer_2(&parse_input(Cursor::new("1212"))), 6);
+        assert_eq!(answer_2(&parse_input(Cursor::new("1221"))), 0);
+        assert_eq!(answer_2(&parse_input(Cursor::new("123425"))), 4);
+        assert_eq!(answer_2(&parse_input(Cursor::new("123123"))), 12);
+        assert_eq!(answer_2(&parse_input(Cursor::new("12131415"))), 4);
     }
 }
