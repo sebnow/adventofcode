@@ -1,8 +1,32 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
+type CubeCoord = (i32, i32, i32);
+
+#[inline]
+fn cube_distance((ax, ay, az): CubeCoord, (bx, by, bz): CubeCoord) -> i32 {
+    ((ax - bx).abs() + (ay - by).abs() + (az - bz).abs()) / 2
+}
+
+#[inline]
+fn step((x, y, z): CubeCoord, dir: &str) -> CubeCoord {
+    match dir {
+        "n"  => (x  , y+1, z-1),
+        "ne" => (x+1, y  , z-1),
+        "se" => (x+1, y-1, z  ),
+        "s"  => (x  , y-1, z+1),
+        "sw" => (x-1, y  , z+1),
+        "nw" => (x-1, y+1, z  ),
+        _ =>    (x  , y  , z  ),
+    }
+}
+
 fn answer_1<R: BufRead>(reader: R) -> i32 {
-    0
+    let origin = (0, 0, 0);
+    cube_distance(origin, reader
+        .split(b',')
+        .map(|x| String::from_utf8(x.unwrap()).unwrap().trim().to_owned())
+        .fold(origin, |pos, dir| step(pos, dir.as_str())))
 }
 
 fn main() {
