@@ -48,7 +48,36 @@ impl Graph {
     }
 
     pub fn groups(&self) -> i32 {
-        0
+        let mut groups = 0;
+        let mut all = HashSet::new();
+
+        for root in 0..self.0.len() - 1 {
+            if all.contains(&root) {
+                continue;
+            }
+
+            let mut seen = HashSet::new();
+            let mut queue = VecDeque::new();
+
+            groups += 1;
+            all.insert(root);
+            queue.push_back(root);
+            seen.insert(root);
+
+            while !queue.is_empty() {
+                let p = queue.pop_front().unwrap();
+
+                for &n in self.0.get(p).unwrap() {
+                    if !seen.contains(&n) {
+                        all.insert(n);
+                        seen.insert(n);
+                        queue.push_back(n);
+                    }
+                }
+            }
+        }
+
+        groups
     }
 }
 
