@@ -1,6 +1,0 @@
-[package]
-name = "adventofcode201712"
-version = "0.1.0"
-authors = ["Sebastian Nowicki <sebnow@gmail.com>"]
-
-[dependencies]
