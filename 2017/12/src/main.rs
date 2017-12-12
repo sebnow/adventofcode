@@ -46,6 +46,10 @@ impl Graph {
 
         seen.len() as i32
     }
+
+    pub fn groups(&self) -> i32 {
+        0
+    }
 }
 
 fn parse_pids(input: &str) -> Vec<usize> {
@@ -73,7 +77,7 @@ fn answer_1(input: &Graph) -> i32 {
 }
 
 fn answer_2(input: &Graph) -> i32 {
-    0
+    input.groups()
 }
 
 fn main() {
@@ -91,10 +95,18 @@ mod test {
     use std::io::Cursor;
 
     #[test]
-    fn example_answer() {
+    fn example_answer_1() {
         let input = Cursor::new(
             "0 <-> 2\n1 <-> 1\n2 <-> 0, 3, 4\n3 <-> 2, 4\n4 <-> 2, 3, 6\n5 <-> 6\n6 <-> 4, 5",
         );
         assert_eq!(answer_1(&parse_input(input)), 6);
+    }
+
+    #[test]
+    fn example_answer_2() {
+        let input = Cursor::new(
+            "0 <-> 2\n1 <-> 1\n2 <-> 0, 3, 4\n3 <-> 2, 4\n4 <-> 2, 3, 6\n5 <-> 6\n6 <-> 4, 5",
+        );
+        assert_eq!(answer_2(&parse_input(input)), 2);
     }
 }
