@@ -31,6 +31,18 @@ fn judge(a: u32, b: u32) -> bool {
     (a & mask) == (b & mask)
 }
 
+fn answer_2(a_seed: u32, b_seed: u32) -> usize {
+    let pairs = 5 * 1000 * 1000;
+    let a = Generator::new(16807, a_seed);
+    let b = Generator::new(48271, b_seed);
+
+    a.filter(|x| x % 4 == 0)
+        .take(pairs)
+        .zip(b.filter(|x| x % 8 == 0).take(pairs))
+        .filter(|&(a, b)| judge(a, b))
+        .count()
+}
+
 fn answer_1(a_seed: u32, b_seed: u32) -> usize {
     let pairs = 40 * 1000 * 1000;
     let a = Generator::new(16807, a_seed);
@@ -44,6 +56,7 @@ fn answer_1(a_seed: u32, b_seed: u32) -> usize {
 
 fn main() {
     println!("Part 1: {}", answer_1(618, 814));
+    println!("Part 2: {}", answer_2(618, 814));
 }
 
 #[cfg(test)]
