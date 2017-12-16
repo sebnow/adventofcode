@@ -1,4 +1,5 @@
 extern crate adventofcode201716;
+
 use std::fs::File;
 use std::io::Read;
 

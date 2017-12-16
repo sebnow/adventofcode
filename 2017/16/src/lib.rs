@@ -50,10 +50,10 @@ fn parse_input(input: &str) -> Vec<Move> {
         .collect()
 }
 
-pub fn answer_1(input: &str) -> String {
-    let mut g = Group::new("abcdefghijklmnop".as_ref());
-    for m in parse_input(input) {
-        match m {
+fn dance(positions: &str, moves: &[Move]) -> String {
+    let mut g = Group::new(positions.as_ref());
+    for m in moves {
+        match *m {
             Move::Spin(x) => g.spin(x),
             Move::Exchange(a, b) => g.exchange(a, b),
             Move::Partner(a, b) => g.partner(a, b),
@@ -62,8 +62,23 @@ pub fn answer_1(input: &str) -> String {
     g.as_str().to_owned()
 }
 
+pub fn answer_1(input: &str) -> String {
+    dance("abcdefghijklmnop", &parse_input(input))
+}
+
 pub fn answer_2(input: &str) -> String {
-    String::new()
+    let mut seen: Vec<String> = Vec::new();
+    let reps = 1000000000;
+    let mut positions = String::from("abcdefghijklmnop");
+    for i in 0..reps {
+        if seen.contains(&positions) {
+            return seen[reps % i].to_owned();
+        }
+        seen.push(positions.clone());
+
+        positions = dance(&positions, &parse_input(input));
+    }
+    positions
 }
 
 #[cfg(test)]
