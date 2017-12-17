@@ -1,0 +1,15 @@
+[package]
+authors = ["Sebastian Nowicki <sebnow@gmail.com>"]
+name = "adventofcode201717"
+version = "0.1.0"
+
+[[bin]]
+name = "adventofcode201717"
+path = "src/bin.rs"
+
+[lib]
+name = "adventofcode201717"
+path = "src/lib.rs"
+
+[dependencies]
+
