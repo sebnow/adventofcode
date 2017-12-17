@@ -1,72 +1,46 @@
-#[derive(Debug, Eq, PartialEq, Clone)]
-struct Point(i32, i32);
+mod point;
+mod sum_spiral;
 
-const RIGHT: Point = Point(1, 0);
-const UP: Point = Point(0, 1);
-const LEFT: Point = Point(-1, 0);
-const DOWN: Point = Point(0, -1);
+use point::Point;
 
-impl Point {
-    pub fn manhattan_distance(&self, b: Self) -> u32 {
-        let (x1, y1) = (self.0, self.1);
-        let (x2, y2) = (b.0, b.1);
-
-        ((x1 - x2).abs() + (y1 - y2).abs()) as u32
+pub fn spiral_point(x: i32) -> Point {
+    if x <= 1 {
+        return Point::new(0, 0);
     }
 
-    pub fn step(&mut self, delta: &Point) {
-        self.0 += delta.0;
-        self.1 += delta.1;
-    }
+    let mut p = Point::new(0, 0);
+    let mut topright = (0, 0);
+    let mut bottomleft = (0, 0);
+    let mut dir = &point::RIGHT;
 
-    pub fn x(&self) -> i32 {
-        self.0
-    }
+    for _ in 2..x + 1 {
+        p.step(&dir);
 
-    pub fn y(&self) -> i32 {
-        self.1
-    }
-}
-
-impl From<i32> for Point {
-    fn from(x: i32) -> Self {
-        if x <= 1 {
-            return Point(0, 0);
+        if p.x() > topright.0 {
+            dir = &point::UP;
+            topright.0 = p.x();
+        } else if p.y() > topright.1 {
+            dir = &point::LEFT;
+            topright.1 = p.y();
+        } else if p.x() < bottomleft.0 {
+            dir = &point::DOWN;
+            bottomleft.0 = p.x();
+        } else if p.y() < bottomleft.1 {
+            dir = &point::RIGHT;
+            bottomleft.1 = p.y();
         }
-
-        let mut p = Point(0, 0);
-        let mut topright = (0, 0);
-        let mut bottomleft = (0, 0);
-        let mut dir = &RIGHT;
-
-        for _ in 2..x + 1 {
-            p.step(&dir);
-
-            if p.x() > topright.0 {
-                dir = &UP;
-                topright.0 = p.x();
-            } else if p.y() > topright.1 {
-                dir = &LEFT;
-                topright.1 = p.y();
-            } else if p.x() < bottomleft.0 {
-                dir = &DOWN;
-                bottomleft.0 = p.x();
-            } else if p.y() < bottomleft.1 {
-                dir = &RIGHT;
-                bottomleft.1 = p.y();
-            }
-        }
-
-        p
     }
+
+    p
 }
 
 fn answer_1(input: i32) -> u32 {
-    Point::from(input).manhattan_distance(Point(0, 0))
+    spiral_point(input).manhattan_distance(Point::new(0, 0))
 }
 
 fn main() {
     println!("Part 1: {}", answer_1(347991));
+    println!("Part 2: {}", answer_1(347991));
 }
 
 #[cfg(test)]
@@ -74,7 +48,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn example() {
+    fn example_1() {
         assert_eq!(answer_1(1), 0);
         assert_eq!(answer_1(12), 3);
         assert_eq!(answer_1(23), 2);
@@ -82,32 +56,27 @@ mod test {
     }
 
     #[test]
-    fn manhattan_distance_symmetrical() {
-        let centre = Point(0, 0);
-        assert_eq!(
-            centre.manhattan_distance(Point(1, 1)),
-            centre.manhattan_distance(Point(-1, -1))
-        );
-        assert_eq!(
-            centre.manhattan_distance(Point(1, 2)),
-            centre.manhattan_distance(Point(-1, -2))
-        );
+    fn example_2() {
+        assert_eq!(answer_2(5), 10);
+        assert_eq!(answer_2(360), 362);
+        assert_eq!(answer_2(600), 747);
+        assert_eq!(answer_2(700), 747);
+        assert_eq!(answer_2(800), 806);
     }
 
     #[test]
     fn input_into_point() {
-        assert_eq!(Point::from(1), Point(0, 0));
-        assert_eq!(Point::from(3), Point(1, 1));
-        assert_eq!(Point::from(11), Point(2, 0));
-        assert_eq!(Point::from(13), Point(2, 2));
-        assert_eq!(Point::from(16), Point(-1, 2));
-        assert_eq!(Point::from(17), Point(-2, 2));
-        assert_eq!(Point::from(20), Point(-2, -1));
-        assert_eq!(Point::from(21), Point(-2, -2));
-        assert_eq!(Point::from(23), Point(0, -2));
-        assert_eq!(Point::from(25), Point(2, -2));
-        assert_eq!(Point::from(26), Point(3, -2));
-        assert_eq!(Point::from(45), Point(-1, -3));
+        assert_eq!(spiral_point(1), Point::new(0, 0));
+        assert_eq!(spiral_point(3), Point::new(1, 1));
+        assert_eq!(spiral_point(11), Point::new(2, 0));
+        assert_eq!(spiral_point(13), Point::new(2, 2));
+        assert_eq!(spiral_point(16), Point::new(-1, 2));
+        assert_eq!(spiral_point(17), Point::new(-2, 2));
+        assert_eq!(spiral_point(20), Point::new(-2, -1));
+        assert_eq!(spiral_point(21), Point::new(-2, -2));
+        assert_eq!(spiral_point(23), Point::new(0, -2));
+        assert_eq!(spiral_point(25), Point::new(2, -2));
+        assert_eq!(spiral_point(26), Point::new(3, -2));
+        assert_eq!(spiral_point(45), Point::new(-1, -3));
     }
-
 }
