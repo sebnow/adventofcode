@@ -2,6 +2,7 @@ mod point;
 mod sum_spiral;
 
 use point::Point;
+use sum_spiral::Spiral;
 
 pub fn spiral_point(x: i32) -> Point {
     if x <= 1 {
@@ -38,9 +39,13 @@ fn answer_1(input: i32) -> u32 {
     spiral_point(input).manhattan_distance(Point::new(0, 0))
 }
 
+fn answer_2(input: i32) -> i32 {
+    Spiral::new().into_iter().find(|&x| x > input).unwrap()
+}
+
 fn main() {
     println!("Part 1: {}", answer_1(347991));
-    println!("Part 2: {}", answer_1(347991));
+    println!("Part 2: {}", answer_2(347991));
 }
 
 #[cfg(test)]
