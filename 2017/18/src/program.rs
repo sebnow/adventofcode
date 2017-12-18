@@ -76,8 +76,8 @@ impl Program {
                     jmp = self.get_value(offset);
                 }
             }
-            &Instr::Snd(r) => {
-                if let Err(e) = self.snd.send(self.mem.get(r)) {
+            &Instr::Snd(ref r) => {
+                if let Err(e) = self.snd.send(self.get_value(r)) {
                     return Err(format_err!("failed to send: {}", e));
                 }
                 self.msgs_sent += 1;

@@ -36,7 +36,7 @@ pub enum Instr {
     Add(char, Value),
     Mul(char, Value),
     Mod(char, Value),
-    Snd(char),
+    Snd(Value),
     Rcv(char),
     Jgz(char, Value),
 }
@@ -80,7 +80,7 @@ impl FromStr for Instr {
             "add" => Ok(Instr::Add(get_register(t, 1)?, get_value(t, 2)?)),
             "mul" => Ok(Instr::Mul(get_register(t, 1)?, get_value(t, 2)?)),
             "mod" => Ok(Instr::Mod(get_register(t, 1)?, get_value(t, 2)?)),
-            "snd" => Ok(Instr::Snd(get_register(t, 1)?)),
+            "snd" => Ok(Instr::Snd(get_value(t, 1)?)),
             "rcv" => Ok(Instr::Rcv(get_register(t, 1)?)),
             "jgz" => Ok(Instr::Jgz(get_register(t, 1)?, get_value(t, 2)?)),
             _ => Err(format_err!("invalid instruction: {}", t)),
@@ -96,7 +96,7 @@ impl fmt::Display for Instr {
             &Instr::Mul(r, ref v) => write!(f, "mul {} {}", r, v),
             &Instr::Mod(r, ref v) => write!(f, "mod {} {}", r, v),
             &Instr::Jgz(r, ref v) => write!(f, "jgz {} {}", r, v),
-            &Instr::Snd(r) => write!(f, "snd {}", r),
+            &Instr::Snd(ref v) => write!(f, "snd {}", v),
             &Instr::Rcv(r) => write!(f, "rcv {}", r),
         }
     }

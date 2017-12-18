@@ -32,7 +32,7 @@ pub fn answer_1(input: &str) -> i64 {
         };
 
         match instr {
-            &Instr::Snd(r) => frequency = mem.get(r),
+            &Instr::Snd(ref r) => frequency = get_value(&mem, r),
             &Instr::Set(r, ref v) => {
                 let x = get_value(&mem, v);
                 mem.set(r, x);
@@ -122,5 +122,13 @@ mod test {
             "set a 1", "jgz a -2",
         ].join("\n");
         assert_eq!(4, answer_1(&input));
+    }
+
+    #[test]
+    fn example_2() {
+        let input = [
+            "snd 1", "snd 2", "snd p", "rcv a", "rcv b", "rcv c", "rcv d"
+        ].join("\n");
+        assert_eq!(3, answer_2(&input));
     }
 }
