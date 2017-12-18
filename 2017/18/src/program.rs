@@ -11,18 +11,24 @@ pub enum State {
 
 pub struct Program {
     pc: usize,
+    pid: i64,
     mem: Memory,
     snd: Sender<i64>,
     rcv: Receiver<i64>,
+    msgs_sent: i64,
 }
 
 impl Program {
-    pub fn new(snd: Sender<i64>, rcv: Receiver<i64>) -> Self {
+    pub fn new(pid: i64, snd: Sender<i64>, rcv: Receiver<i64>) -> Self {
+        let mut mem = Memory::new();
+        mem.set('p', pid);
         Program {
             pc: 0,
+            pid: pid,
             mem: Memory::new(),
             snd: snd,
             rcv: rcv,
+            msgs_sent: 0,
         }
     }
 
@@ -33,13 +39,20 @@ impl Program {
         }
     }
 
+    pub fn msgs_sent(&self) -> i64 {
+        self.msgs_sent
+    }
+
     pub fn execute<'a>(&mut self, instructions: &[Instr]) -> Result<State, Error> {
         let mut jmp = 1;
         let instr = instructions
             .get(self.pc)
             .ok_or(format_err!("no instruction at {}", self.pc))?;
 
-        println!("{} {:?}", self.pc, instr);
+        //        println!(
+        //            "PID:{} | PC:{:2} | {:20} \t  \t{:?}",
+        //            self.pid, self.pc, instr, self.mem
+        //        );
         match instr {
             &Instr::Set(r, ref v) => {
                 let x = self.get_value(v);
@@ -67,6 +80,7 @@ impl Program {
                 if let Err(e) = self.snd.send(self.mem.get(r)) {
                     return Err(format_err!("failed to send: {}", e));
                 }
+                self.msgs_sent += 1;
             }
             &Instr::Rcv(r) => {
                 match self.rcv.recv() {

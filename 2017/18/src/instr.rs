@@ -1,3 +1,4 @@
+use std::fmt;
 use std::str::FromStr;
 use failure::Error;
 
@@ -5,6 +6,15 @@ use failure::Error;
 pub enum Value {
     Indirect(char),
     Direct(i64),
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &Value::Indirect(x) => write!(f, "{}", x),
+            &Value::Direct(x) => write!(f, "{}", x),
+        }
+    }
 }
 
 impl FromStr for Value {
@@ -74,6 +84,20 @@ impl FromStr for Instr {
             "rcv" => Ok(Instr::Rcv(get_register(t, 1)?)),
             "jgz" => Ok(Instr::Jgz(get_register(t, 1)?, get_value(t, 2)?)),
             _ => Err(format_err!("invalid instruction: {}", t)),
+        }
+    }
+}
+
+impl fmt::Display for Instr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &Instr::Set(r, ref v) => write!(f, "set {} {}", r, v),
+            &Instr::Add(r, ref v) => write!(f, "add {} {}", r, v),
+            &Instr::Mul(r, ref v) => write!(f, "mul {} {}", r, v),
+            &Instr::Mod(r, ref v) => write!(f, "mod {} {}", r, v),
+            &Instr::Jgz(r, ref v) => write!(f, "jgz {} {}", r, v),
+            &Instr::Snd(r) => write!(f, "snd {}", r),
+            &Instr::Rcv(r) => write!(f, "rcv {}", r),
         }
     }
 }
