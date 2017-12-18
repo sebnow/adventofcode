@@ -1,4 +1,18 @@
+#[macro_use]
+extern crate failure;
+
+mod instr;
+
+use std::str::FromStr;
+
+use instr::*;
+
+fn parse_input(input: &str) -> Vec<Instr> {
+    input.lines().map(|l| Instr::from_str(l).unwrap()).collect()
+}
+
 pub fn answer_1(input: &str) -> i32 {
+    let _instructions = parse_input(input);
     0
 }
 
