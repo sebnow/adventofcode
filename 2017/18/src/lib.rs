@@ -2,12 +2,12 @@
 extern crate failure;
 
 mod instr;
-mod processor;
+mod memory;
 
 use std::str::FromStr;
 
 use instr::*;
-use processor::*;
+use memory::*;
 
 fn parse_input(input: &str) -> Vec<Instr> {
     input.lines().map(|l| Instr::from_str(l).unwrap()).collect()
@@ -16,43 +16,43 @@ fn parse_input(input: &str) -> Vec<Instr> {
 pub fn answer_1(input: &str) -> i64 {
     let mut pc = 0;
     let mut frequency: i64 = 0;
-    let mut processor = Processor::new();
+    let mut mem = Memory::new();
     let instructions = parse_input(input);
 
     loop {
         let mut jmp = 1;
         let instr = instructions.get(pc).unwrap();
-        let get_value = |p: &Processor, v: &Value| match v {
+        let get_value = |p: &Memory, v: &Value| match v {
             &Value::Direct(x) => x,
             &Value::Indirect(r) => p.get(r),
         };
 
         match instr {
-            &Instr::Snd(r) => frequency = processor.get(r),
+            &Instr::Snd(r) => frequency = mem.get(r),
             &Instr::Set(r, ref v) => {
-                let x = get_value(&processor, v);
-                processor.set(r, x);
+                let x = get_value(&Memory, v);
+                mem.set(r, x);
             }
             &Instr::Add(r, ref v) => {
-                let new = processor.get(r) + get_value(&processor, v);
-                processor.set(r, new);
+                let new = mem.get(r) + get_value(&mem, v);
+                mem.set(r, new);
             }
             &Instr::Mul(r, ref v) => {
-                let new = processor.get(r) * get_value(&processor, v);
-                processor.set(r, new);
+                let new = mem.get(r) * get_value(&mem, v);
+                mem.set(r, new);
             }
             &Instr::Mod(r, ref v) => {
-                let new = processor.get(r) % get_value(&processor, v);
-                processor.set(r, new);
+                let new = mem.get(r) % get_value(&mem, v);
+                mem.set(r, new);
             }
             &Instr::Jgz(r, ref offset) => {
-                let v = processor.get(r);
+                let v = mem.get(r);
                 if v > 0 {
-                    jmp = get_value(&processor, offset);
+                    jmp = get_value(&mem, offset);
                 }
             }
             &Instr::Rcv(r) => {
-                let v = processor.get(r);
+                let v = mem.get(r);
                 if v > 0 {
                     return frequency;
                 }
