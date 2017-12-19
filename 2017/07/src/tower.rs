@@ -1,10 +1,10 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::hash::{Hash, Hasher};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Program {
     pub name: String,
-    pub weight: i32,
+    pub weight: u32,
     pub disc: HashSet<String>,
 }
 
@@ -15,7 +15,7 @@ impl Hash for Program {
 }
 
 impl Program {
-    pub fn new(name: String, weight: i32) -> Self {
+    pub fn new(name: String, weight: u32) -> Self {
         Program {
             name: name,
             weight: weight,
@@ -31,12 +31,14 @@ impl Program {
 #[derive(Debug, PartialEq, Eq)]
 pub struct Tower {
     programs: HashMap<String, Program>,
+    weights: HashMap<String, u32>,
 }
 
 impl Tower {
     pub fn new() -> Self {
         Tower {
             programs: HashMap::new(),
+            weights: HashMap::new(),
         }
     }
 
@@ -65,6 +67,45 @@ impl Tower {
             .next()
             .and_then(|&n| self.programs.get(n))
     }
+
+    fn weigh(&mut self, name: &str) {
+        let mut sorted = Vec::new();
+        let mut q = VecDeque::new();
+        q.push_back(name);
+
+        while let Some(n) = q.pop_front() {
+            if self.weights.contains_key(n) {
+                continue
+            }
+
+            sorted.push(n);
+            let p = self.programs.get(n).unwrap();
+            for c in &p.disc {
+                q.push_back(c);
+            }
+        }
+
+        while let Some(n) = sorted.pop() {
+            let p = self.programs.get(n).unwrap();
+            let mut w = p.weight;
+            for c in &p.disc {
+                w += self.weights.get(c).unwrap();
+            }
+            self.weights.insert(n.to_owned(), w);
+        }
+    }
+
+    pub fn get_total_weight(&mut self, name: &str) -> Option<u32> {
+        if !self.weights.contains_key(name) {
+            self.weigh(name);
+        }
+
+        self.weights.get(name).map(|x| *x)
+    }
+
+    pub fn find_imbalance(&self) -> Option<(&str, u32)> {
+        Some(("root", 0))
+    }
 }
 
 #[cfg(test)]
@@ -90,5 +131,23 @@ mod test {
         root.insert("bar".into());
         root.insert("eggs".into());
         assert_eq!(tower.root(), Some(&root));
+    }
+
+    #[test]
+    fn test_get_total_weight() {
+        let mut tower = Tower::new();
+
+        tower.add(Program::new("foo".into(), 1));
+        tower.add(Program::new("bar".into(), 3));
+        tower.add(Program::new("baz".into(), 5));
+        tower.add(Program::new("eggs".into(), 7));
+        tower.add(Program::new("spam".into(), 9));
+
+        tower.link("foo", "bar");
+        tower.link("bar", "baz");
+        tower.link("bar", "eggs");
+        tower.link("eggs", "spam");
+
+        assert_eq!(tower.get_total_weight("bar"), Some(3 + 5 + 7 + 9));
     }
 }

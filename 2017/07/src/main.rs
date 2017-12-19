@@ -17,7 +17,7 @@ fn track_from_input<R: BufRead>(tower: &mut Tower, reader: R) {
     for l in reader.lines().map(|l| l.unwrap()) {
         let caps = re.captures(&l).unwrap();
         let name = caps.get(1).unwrap().as_str();
-        let weight: i32 = caps.get(2).unwrap().as_str().parse().unwrap();
+        let weight = caps.get(2).unwrap().as_str().parse().unwrap();
         let leafs = caps.get(3).map_or(vec![], |x| parse_leafs(x.as_str()));
 
         tower.add(Program::new(name.to_owned(), weight));
@@ -38,22 +38,23 @@ fn main() {
     track_from_input(&mut tower, reader);
 
     println!("Answer 1: {:?}", tower.root().unwrap().name);
+    println!("Answer 1: {:?}", tower.find_imbalance());
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
     use std::io::BufReader;
-    use std::io::Cursor;
     use std::fs::File;
 
     #[test]
-    fn test_example_part_1() {
+    fn test_example() {
         let mut tower = Tower::new();
         let file = File::open("example1.txt").unwrap();
         let reader = BufReader::new(file);
         track_from_input(&mut tower, reader);
 
-        assert_eq!(tower.root().unwrap().name, String::from("tknk"))
+        assert_eq!(tower.root().unwrap().name, String::from("tknk"));
+        assert_eq!(tower.find_imbalance().unwrap().1, 60);
     }
 }
