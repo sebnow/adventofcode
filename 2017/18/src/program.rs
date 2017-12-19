@@ -70,9 +70,9 @@ impl Program {
                 let new = self.mem.get(r) % self.get_value(v);
                 self.mem.set(r, new);
             }
-            &Instr::Jgz(r, ref offset) => {
-                let v = self.mem.get(r);
-                if v > 0 {
+            &Instr::Jgz(ref v, ref offset) => {
+                let x = self.get_value(v);
+                if x > 0 {
                     jmp = self.get_value(offset);
                 }
             }

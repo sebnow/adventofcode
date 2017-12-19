@@ -49,9 +49,9 @@ pub fn answer_1(input: &str) -> i64 {
                 let new = mem.get(r) % get_value(&mem, v);
                 mem.set(r, new);
             }
-            &Instr::Jgz(r, ref offset) => {
-                let v = mem.get(r);
-                if v > 0 {
+            &Instr::Jgz(ref v, ref offset) => {
+                let x = get_value(&mem, v);
+                if x > 0 {
                     jmp = get_value(&mem, offset);
                 }
             }
