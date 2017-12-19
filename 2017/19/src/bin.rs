@@ -9,5 +9,5 @@ fn main() {
     file.read_to_string(&mut input).unwrap();
 
     println!("Part 1: {}", adventofcode201719::answer_1(&input).unwrap());
-    println!("Part 2: {}", adventofcode201719::answer_2(&input));
+    println!("Part 2: {}", adventofcode201719::answer_2(&input).unwrap());
 }

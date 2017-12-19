@@ -65,7 +65,8 @@ fn find_paths(map: &Vec<Vec<Option<Sym>>>, &Point(x, y): &Point, &Point(lx, ly):
     paths
 }
 
-pub fn traverse(map: &Vec<Vec<Option<Sym>>>) -> Result<String, failure::Error> {
+pub fn traverse(map: &Vec<Vec<Option<Sym>>>) -> Result<(String, i64), failure::Error> {
+    let mut steps = 0;
     let mut letters = String::new();
     let mut dir = Point(0, 1);
     let mut p = find_start(map).ok_or(format_err!("start missing"))?;
@@ -93,20 +94,24 @@ pub fn traverse(map: &Vec<Vec<Option<Sym>>>) -> Result<String, failure::Error> {
             &None => break,
         };
 
+        steps += 1;
         last_p.0 = p.0;
         last_p.1 = p.1;
         p = p.step(&dir);
     }
 
-    Ok(letters)
+    Ok((letters, steps))
 }
 
 pub fn answer_1(input: &str) -> Result<String, failure::Error> {
     let map = parse_input(input);
-    traverse(&map)
+    traverse(&map).map(|r| r.0)
 }
 
-pub fn answer_2(_input: &str) -> u32 {0}
+pub fn answer_2(input: &str) -> Result<i64, failure::Error> {
+    let map = parse_input(input);
+    traverse(&map).map(|r| r.1)
+}
 
 #[cfg(test)]
 mod test {
@@ -125,5 +130,20 @@ mod test {
         ].join("\n");
 
         assert_eq!(String::from("ABCDEF"), answer_1(&input).unwrap());
+    }
+
+    #[test]
+    fn example_2() {
+        let input = [
+            "     |          ",
+            "     |  +--+    ",
+            "     A  |  C    ",
+            " F---|----E|--+ ",
+            "     |  |  |  D ",
+            "     +B-+  +--+ ",
+            "                ",
+        ].join("\n");
+
+        assert_eq!(38, answer_2(&input).unwrap());
     }
 }
