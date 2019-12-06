@@ -11,3 +11,4 @@ bench = false
 aoc-runner = "^0.2.2"
 aoc-runner-derive = "^0.2.2"
 anyhow = "^1.0.25"
+itertools = "^0.8.2"

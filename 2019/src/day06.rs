@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Context, Result};
+use itertools::Itertools;
 use std::collections::HashMap;
 
 fn get_orbiting<'a>(orbits: &HashMap<&'a str, &'a str>, mut satellite: &'a str) -> Vec<&'a str> {
@@ -54,15 +55,11 @@ fn answer_2<'a>(input: &'a [Vec<String>]) -> Result<usize> {
     let you = get_orbiting(&satellites, "YOU");
     let san = get_orbiting(&satellites, "SAN");
 
-    for (i, x) in you.iter().enumerate() {
-        for (j, y) in san.iter().enumerate() {
-            if x == y {
-                return Ok(i + j);
-            }
-        }
-    }
-
-    Err(anyhow!("path not found"))
+    you.iter()
+        .enumerate()
+        .cartesian_product(san.iter().enumerate())
+        .find_map(|((i, x), (j, y))| if x == y { Some(i + j) } else { None })
+        .ok_or_else(|| anyhow!("path not found"))
 }
 
 #[cfg(test)]
