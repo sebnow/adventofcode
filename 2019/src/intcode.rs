@@ -42,7 +42,7 @@ impl std::fmt::Display for Op {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum State {
     Suspended(i64),
     Terminated(i64),
