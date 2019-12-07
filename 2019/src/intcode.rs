@@ -43,6 +43,18 @@ impl std::fmt::Display for Op {
 }
 
 #[derive(Debug)]
+pub enum State {
+    Suspended(i64),
+    Terminated(i64),
+}
+
+enum InstrResult {
+    Suspend(i64),
+    Terminate,
+    Continue,
+}
+
+#[derive(Debug)]
 enum Param {
     Immediate(i64),
     Pointer(usize),
@@ -74,42 +86,41 @@ impl Interpretor {
         }
     }
 
-    pub fn run(&mut self) -> Result<Vec<i64>> {
-        let inputs = self.inputs.to_owned();
+    pub fn run(&mut self) -> Result<State> {
         loop {
             let op = self.parse_op()?;
-
-            if let Op::Terminate = op {
-                break;
+            let result = self.interpret(op)?;
+            match result {
+                InstrResult::Suspend(x) => return Ok(State::Suspended(x)),
+                InstrResult::Terminate => {
+                    return Ok(State::Terminated(self.outputs[self.outputs.len() - 1]))
+                }
+                InstrResult::Continue => continue,
             }
-
-            self.interpret(op)?;
         }
-
-        Ok(self.outputs.to_owned())
     }
 
-    fn interpret(&mut self, op: Op) -> Result<()> {
+    fn interpret(&mut self, op: Op) -> Result<InstrResult> {
         match op {
             Op::Add(a, b, out) => {
                 self.memory[out] = self.get_value(a) + self.get_value(b);
-                Ok(())
+                Ok(InstrResult::Continue)
             }
             Op::Multiply(a, b, out) => {
                 self.memory[out] = self.get_value(a) * self.get_value(b);
-                Ok(())
+                Ok(InstrResult::Continue)
             }
             Op::JumpTrue(a, b) => {
                 if self.get_value(a) != 0 {
                     self.ip = self.get_value(b) as usize;
                 }
-                Ok(())
+                Ok(InstrResult::Continue)
             }
             Op::JumpFalse(a, b) => {
                 if self.get_value(a) == 0 {
                     self.ip = self.get_value(b) as usize;
                 }
-                Ok(())
+                Ok(InstrResult::Continue)
             }
             Op::Less(a, b, out) => {
                 self.memory[out] = if self.get_value(a) < self.get_value(b) {
@@ -117,7 +128,7 @@ impl Interpretor {
                 } else {
                     0
                 };
-                Ok(())
+                Ok(InstrResult::Continue)
             }
             Op::Equal(a, b, out) => {
                 self.memory[out] = if self.get_value(a) == self.get_value(b) {
@@ -125,7 +136,7 @@ impl Interpretor {
                 } else {
                     0
                 };
-                Ok(())
+                Ok(InstrResult::Continue)
             }
             Op::Input(out) => {
                 let v = self
@@ -133,17 +144,15 @@ impl Interpretor {
                     .pop_front()
                     .ok_or_else(|| anyhow!("missing input"))?;
                 self.memory[out] = v;
-                Ok(())
+                Ok(InstrResult::Continue)
             }
             Op::Output(out) => {
                 let v = self.get_value(out);
                 self.outputs.push(v);
-                Ok(())
+                Ok(InstrResult::Suspend(v))
             }
-            _ => Err(anyhow!("unexpected terminate operation")),
-        }?;
-
-        Ok(())
+            Op::Terminate => Ok(InstrResult::Terminate),
+        }
     }
 
     fn parse_op(&mut self) -> Result<Op> {
