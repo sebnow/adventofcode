@@ -1,5 +1,6 @@
 use crate::intcode::Interpretor;
-use anyhow::{anyhow, Result};
+use anyhow::Result;
+use itertools::Itertools;
 
 fn run_with_input(memory: &[i64], a: i64, b: i64) -> Result<i64> {
     let mut mem = memory.to_owned();
@@ -26,17 +27,19 @@ fn answer_1(memory: &[i64]) -> Result<i64> {
 }
 
 #[aoc(day2, part2)]
-fn answer_2(memory: &[i64]) -> Result<i64> {
-    for x in 0..99 {
-        for y in 0..99 {
-            let result = run_with_input(memory, x, y)?;
+fn answer_2(memory: &[i64]) -> i64 {
+    (0..99)
+        .cartesian_product(0..99)
+        .filter_map(|(x, y)| {
+            let result = run_with_input(memory, x, y).unwrap();
             if result == 19_690_720 {
-                return Ok(100 * x + y);
+                Some(100 * x + y)
+            } else {
+                None
             }
-        }
-    }
-
-    Err(anyhow!("No answer"))
+        })
+        .last()
+        .unwrap()
 }
 
 #[cfg(test)]
