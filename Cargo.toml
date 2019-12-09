@@ -1,6 +1,0 @@
-[workspace]
-
-members = [
-    "2019",
-	"2019/target/aoc/aoc-autobuild",
-]
