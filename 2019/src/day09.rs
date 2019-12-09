@@ -14,14 +14,14 @@ pub fn input_generator(input: &str) -> Vec<i64> {
 fn answer_1(memory: &[i64]) -> Result<i64> {
     let mut i = Interpretor::new(memory);
     i.input(1);
-    i.run_complete()
+    i.run_complete().map(|x| x.unwrap())
 }
 
 #[aoc(day9, part2)]
 fn answer_2(memory: &[i64]) -> Result<i64> {
     let mut i = Interpretor::new(memory);
     i.input(2);
-    i.run_complete()
+    i.run_complete().map(|x| x.unwrap())
 }
 
 #[cfg(test)]

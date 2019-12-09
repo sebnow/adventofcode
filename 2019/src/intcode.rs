@@ -49,7 +49,7 @@ impl std::fmt::Display for Op {
 #[derive(Debug, PartialEq)]
 pub enum State {
     Suspended(i64),
-    Terminated(i64),
+    Terminated(Option<i64>),
 }
 
 enum InstrResult {
@@ -101,14 +101,14 @@ impl Interpretor {
             match result {
                 InstrResult::Suspend(x) => return Ok(State::Suspended(x)),
                 InstrResult::Terminate => {
-                    return Ok(State::Terminated(self.outputs[self.outputs.len() - 1]))
+                    return Ok(State::Terminated(self.outputs.iter().last().copied()))
                 }
                 InstrResult::Continue => continue,
             }
         }
     }
 
-    pub fn run_complete(&mut self) -> Result<i64> {
+    pub fn run_complete(&mut self) -> Result<Option<i64>> {
         loop {
             match self.run()? {
                 State::Terminated(x) => return Ok(x),

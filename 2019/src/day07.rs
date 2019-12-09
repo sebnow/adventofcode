@@ -11,12 +11,7 @@ fn get_signal(phases: &[i64], memory: &[i64]) -> i64 {
 
     amplifiers.fold(0, |signal, mut p| {
         p.input(signal);
-        loop {
-            match p.run().unwrap() {
-                State::Terminated(x) => return x,
-                State::Suspended(_) => continue,
-            }
-        }
+        p.run_complete().map(|x| x.unwrap()).unwrap()
     })
 }
 
@@ -39,7 +34,7 @@ fn get_chained_signal(phases: &[i64], memory: &[i64]) -> Result<i64> {
                 State::Suspended(x) => signal = x,
                 State::Terminated(x) => {
                     if i == last_amplifier {
-                        return Ok(x);
+                        return Ok(x.unwrap());
                     } else {
                         continue;
                     }
