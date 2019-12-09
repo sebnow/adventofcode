@@ -1,5 +1,5 @@
-use crate::intcode::{Interpretor, State};
-use anyhow::{anyhow, Result};
+use crate::intcode::Interpretor;
+use anyhow::Result;
 
 #[aoc_generator(day5)]
 pub fn input_generator(input: &str) -> Vec<i64> {
@@ -14,25 +14,20 @@ pub fn input_generator(input: &str) -> Vec<i64> {
 fn answer_1(memory: &[i64]) -> Result<i64> {
     let mut proc = Interpretor::new(&memory);
     proc.input(1);
-    match proc.run()? {
-        State::Terminated(x) => Ok(x),
-        _ => Err(anyhow!("did not terminate")),
-    }
+    proc.run_complete()
 }
 
 #[aoc(day5, part2)]
 fn answer_2(memory: &[i64]) -> Result<i64> {
     let mut proc = Interpretor::new(&memory);
     proc.input(5);
-    match proc.run()? {
-        State::Terminated(x) => Ok(x),
-        _ => Err(anyhow!("did not terminate")),
-    }
+    proc.run_complete()
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::intcode::State;
 
     #[test]
     fn examples_2_1() {

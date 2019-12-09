@@ -9,19 +9,22 @@ const OP_JMPT: i64 = 5;
 const OP_JMPF: i64 = 6;
 const OP_LESS: i64 = 7;
 const OP_EQUA: i64 = 8;
+const OP_ADRB: i64 = 9;
 const OP_TERM: i64 = 99;
 const MODE_POSITION: i64 = 0;
 const MODE_IMMEDIATE: i64 = 1;
+const MODE_RELATIVE: i64 = 2;
 
 #[derive(Debug)]
 enum Op {
-    Add(Param, Param, usize),
-    Multiply(Param, Param, usize),
+    Add(Param, Param, Param),
+    Multiply(Param, Param, Param),
     JumpTrue(Param, Param),
     JumpFalse(Param, Param),
-    Less(Param, Param, usize),
-    Equal(Param, Param, usize),
-    Input(usize),
+    Less(Param, Param, Param),
+    Equal(Param, Param, Param),
+    AdjustRelBase(Param),
+    Input(Param),
     Output(Param),
     Terminate,
 }
@@ -29,15 +32,16 @@ enum Op {
 impl std::fmt::Display for Op {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Op::Add(a, b, c) => write!(f, "&{} = {} + {}", c, a, b),
-            Op::Multiply(a, b, c) => write!(f, "&{} = {} * {}", c, a, b),
-            Op::JumpTrue(a, b) => write!(f, "JT {} {}", a, b),
-            Op::JumpFalse(a, b) => write!(f, "JF {} {}", a, b),
-            Op::Less(a, b, c) => write!(f, "{} = {} < {}", c, a, b),
-            Op::Equal(a, b, c) => write!(f, "{} = {} == {}", c, a, b),
-            Op::Input(a) => write!(f, "->{}", a),
-            Op::Output(a) => write!(f, "<-{}", a),
-            Op::Terminate => write!(f, "TERM"),
+            Op::Add(a, b, c) => write!(f, "ADD {:>10}, {:>10}, {:>10}", a, b, c),
+            Op::Multiply(a, b, c) => write!(f, "MUL {:>10}, {:>10}, {:>10}", a, b, c),
+            Op::JumpTrue(a, b) => write!(f, "JNZ {:>10}, {:>10}", a, b),
+            Op::JumpFalse(a, b) => write!(f, "JZ  {:>10}, {:>10}", a, b),
+            Op::Less(a, b, c) => write!(f, "LTH {:>10}, {:>10}, {:>10}", a, b, c),
+            Op::Equal(a, b, c) => write!(f, "EQL {:>10}, {:>10}, {:>10}", a, b, c),
+            Op::Input(a) => write!(f, "INP {:>10}", a),
+            Op::Output(a) => write!(f, "OUT {:>10}", a),
+            Op::AdjustRelBase(a) => write!(f, "ARB {}", a),
+            Op::Terminate => write!(f, "END"),
         }
     }
 }
@@ -54,10 +58,11 @@ enum InstrResult {
     Continue,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 enum Param {
     Immediate(i64),
     Pointer(usize),
+    Relative(i64),
 }
 
 impl std::fmt::Display for Param {
@@ -65,12 +70,14 @@ impl std::fmt::Display for Param {
         match self {
             Param::Immediate(x) => write!(f, "{}", x),
             Param::Pointer(x) => write!(f, "&{}", x),
+            Param::Relative(x) => write!(f, "~{}", x),
         }
     }
 }
 
 pub struct Interpretor {
     ip: usize,
+    rb: usize,
     memory: Vec<i64>,
     inputs: VecDeque<i64>,
     outputs: Vec<i64>,
@@ -80,6 +87,7 @@ impl Interpretor {
     pub fn new(memory: &[i64]) -> Self {
         Interpretor {
             ip: 0,
+            rb: 0,
             memory: memory.to_owned(),
             outputs: Vec::new(),
             inputs: VecDeque::new(),
@@ -100,14 +108,23 @@ impl Interpretor {
         }
     }
 
+    pub fn run_complete(&mut self) -> Result<i64> {
+        loop {
+            match self.run()? {
+                State::Terminated(x) => return Ok(x),
+                State::Suspended(_) => continue,
+            }
+        }
+    }
+
     fn interpret(&mut self, op: Op) -> Result<InstrResult> {
         match op {
-            Op::Add(a, b, out) => {
-                self.memory[out] = self.get_value(a) + self.get_value(b);
+            Op::Add(a, b, c) => {
+                self.set(c, self.get_value(a) + self.get_value(b))?;
                 Ok(InstrResult::Continue)
             }
-            Op::Multiply(a, b, out) => {
-                self.memory[out] = self.get_value(a) * self.get_value(b);
+            Op::Multiply(a, b, c) => {
+                self.set(c, self.get_value(a) * self.get_value(b))?;
                 Ok(InstrResult::Continue)
             }
             Op::JumpTrue(a, b) => {
@@ -122,34 +139,44 @@ impl Interpretor {
                 }
                 Ok(InstrResult::Continue)
             }
-            Op::Less(a, b, out) => {
-                self.memory[out] = if self.get_value(a) < self.get_value(b) {
-                    1
-                } else {
-                    0
-                };
+            Op::Less(a, b, c) => {
+                self.set(
+                    c,
+                    if self.get_value(a) < self.get_value(b) {
+                        1
+                    } else {
+                        0
+                    },
+                )?;
                 Ok(InstrResult::Continue)
             }
-            Op::Equal(a, b, out) => {
-                self.memory[out] = if self.get_value(a) == self.get_value(b) {
-                    1
-                } else {
-                    0
-                };
+            Op::Equal(a, b, c) => {
+                self.set(
+                    c,
+                    if self.get_value(a) == self.get_value(b) {
+                        1
+                    } else {
+                        0
+                    },
+                )?;
                 Ok(InstrResult::Continue)
             }
-            Op::Input(out) => {
+            Op::Input(a) => {
                 let v = self
                     .inputs
                     .pop_front()
                     .ok_or_else(|| anyhow!("missing input"))?;
-                self.memory[out] = v;
+                self.set(a, v)?;
                 Ok(InstrResult::Continue)
             }
             Op::Output(out) => {
                 let v = self.get_value(out);
                 self.outputs.push(v);
                 Ok(InstrResult::Suspend(v))
+            }
+            Op::AdjustRelBase(a) => {
+                self.rb = (self.rb as i64 + self.get_value(a)) as usize;
+                Ok(InstrResult::Continue)
             }
             Op::Terminate => Ok(InstrResult::Terminate),
         }
@@ -161,14 +188,15 @@ impl Interpretor {
         instr /= 100;
 
         match opcode {
-            OP_ADDI => self.parse_instr_add(&mut instr),
-            OP_MULT => self.parse_instr_mul(&mut instr),
-            OP_JMPT => self.parse_instr_jt(&mut instr),
-            OP_JMPF => self.parse_instr_jf(&mut instr),
+            OP_ADDI => self.parse_instr_addi(&mut instr),
+            OP_MULT => self.parse_instr_mult(&mut instr),
+            OP_JMPT => self.parse_instr_jmpt(&mut instr),
+            OP_JMPF => self.parse_instr_jmpf(&mut instr),
             OP_LESS => self.parse_instr_less(&mut instr),
-            OP_EQUA => self.parse_instr_equal(&mut instr),
-            OP_INPU => self.parse_instr_input(),
-            OP_OUTP => self.parse_instr_output(&mut instr),
+            OP_EQUA => self.parse_instr_equa(&mut instr),
+            OP_INPU => self.parse_instr_inpu(&mut instr),
+            OP_OUTP => self.parse_instr_outp(&mut instr),
+            OP_ADRB => self.parse_instr_adrb(&mut instr),
             OP_TERM => Ok(Op::Terminate),
             _ => Err(anyhow!("invalid operation: {}", opcode)),
         }
@@ -188,7 +216,29 @@ impl Interpretor {
     fn get_value(&self, param: Param) -> i64 {
         match param {
             Param::Immediate(v) => v,
-            Param::Pointer(i) => self.memory[i],
+            Param::Pointer(i) => self.get(i),
+            Param::Relative(d) => self.get((self.rb as i64 + d) as usize),
+        }
+    }
+
+    fn set(&mut self, addr: Param, x: i64) -> Result<()> {
+        let dst = match addr {
+            Param::Pointer(x) => Ok(x),
+            Param::Relative(x) => Ok((self.rb as i64 + x) as usize),
+            Param::Immediate(_) => Err(anyhow!("destination can not be an immediate value")),
+        }?;
+        self.memory
+            .resize_with(self.memory.len().max(dst + 1), || 0);
+        self.memory[dst] = x;
+
+        Ok(())
+    }
+
+    pub fn get(&self, addr: usize) -> i64 {
+        if addr >= self.memory.len() {
+            0
+        } else {
+            self.memory[addr]
         }
     }
 
@@ -196,33 +246,33 @@ impl Interpretor {
         self.inputs.push_back(v);
     }
 
-    fn parse_instr_add(&mut self, mut modes: &mut i64) -> Result<Op> {
+    fn parse_instr_addi(&mut self, mut modes: &mut i64) -> Result<Op> {
         Ok(Op::Add(
             self.parse_param(&mut modes)
                 .context("first operand to add operation")?,
             self.parse_param(&mut modes)
                 .context("second operand to add operation")?,
-            self.parse_position(&mut modes)
+            self.parse_param(&mut modes)
                 .context("third operand to add operation")?,
         ))
     }
 
-    fn parse_instr_mul(&mut self, mut modes: &mut i64) -> Result<Op> {
+    fn parse_instr_mult(&mut self, mut modes: &mut i64) -> Result<Op> {
         Ok(Op::Multiply(
             self.parse_param(&mut modes)?,
             self.parse_param(&mut modes)?,
-            self.parse_position(&mut modes)?,
+            self.parse_param(&mut modes)?,
         ))
     }
 
-    fn parse_instr_jt(&mut self, mut modes: &mut i64) -> Result<Op> {
+    fn parse_instr_jmpt(&mut self, mut modes: &mut i64) -> Result<Op> {
         Ok(Op::JumpTrue(
             self.parse_param(&mut modes)?,
             self.parse_param(&mut modes)?,
         ))
     }
 
-    fn parse_instr_jf(&mut self, mut modes: &mut i64) -> Result<Op> {
+    fn parse_instr_jmpf(&mut self, mut modes: &mut i64) -> Result<Op> {
         Ok(Op::JumpFalse(
             self.parse_param(&mut modes)?,
             self.parse_param(&mut modes)?,
@@ -233,23 +283,27 @@ impl Interpretor {
         Ok(Op::Less(
             self.parse_param(&mut modes)?,
             self.parse_param(&mut modes)?,
-            self.parse_position(&mut modes)?,
+            self.parse_param(&mut modes)?,
         ))
     }
 
-    fn parse_instr_equal(&mut self, mut modes: &mut i64) -> Result<Op> {
+    fn parse_instr_equa(&mut self, mut modes: &mut i64) -> Result<Op> {
         Ok(Op::Equal(
             self.parse_param(&mut modes)?,
             self.parse_param(&mut modes)?,
-            self.parse_position(&mut modes)?,
+            self.parse_param(&mut modes)?,
         ))
     }
 
-    fn parse_instr_input(&mut self) -> Result<Op> {
-        Ok(Op::Input(self.get_token()? as usize))
+    fn parse_instr_adrb(&mut self, mut modes: &mut i64) -> Result<Op> {
+        Ok(Op::AdjustRelBase(self.parse_param(&mut modes)?))
     }
 
-    fn parse_instr_output(&mut self, mut modes: &mut i64) -> Result<Op> {
+    fn parse_instr_inpu(&mut self, mut modes: &mut i64) -> Result<Op> {
+        Ok(Op::Input(self.parse_param(&mut modes)?))
+    }
+
+    fn parse_instr_outp(&mut self, mut modes: &mut i64) -> Result<Op> {
         Ok(Op::Output(self.parse_param(&mut modes)?))
     }
 
@@ -262,20 +316,8 @@ impl Interpretor {
         match mode {
             MODE_IMMEDIATE => Ok(Param::Immediate(p)),
             MODE_POSITION => Ok(Param::Pointer(p as usize)),
+            MODE_RELATIVE => Ok(Param::Relative(p)),
             _ => Err(anyhow!("inavlid mode: {}", mode)),
-        }
-    }
-
-    fn parse_position(&mut self, modes: &mut i64) -> Result<usize> {
-        let mode = *modes % 10;
-        *modes /= 10;
-
-        match mode {
-            MODE_POSITION => {
-                let p = self.get_token()?;
-                Ok(p as usize)
-            }
-            _ => Err(anyhow!("output parameter must have position mode")),
         }
     }
 }
