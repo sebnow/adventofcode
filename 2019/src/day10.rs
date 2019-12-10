@@ -1,6 +1,17 @@
 use crate::point::Point;
+use std::collections::HashMap;
 
 const THRESHOLD: f64 = 0.000_1;
+const PRECISION: f64 = 100_000_000.0;
+
+#[derive(Hash, Eq, PartialEq, PartialOrd, Ord, Copy, Clone)]
+struct Angle(i64);
+
+impl Angle {
+    pub fn from_f64(a: f64) -> Self {
+        Angle((a * PRECISION) as i64)
+    }
+}
 
 fn is_in_line_of_sight(asteroids: &[Point], a: &Point, b: &Point) -> bool {
     asteroids
@@ -38,47 +49,62 @@ fn find_best_place(asteroids: &[Point]) -> (&Point, usize) {
     max
 }
 
-fn imma_firin_mah_lazer(roids: &[Point], base: &Point) -> Vec<Point> {
-    let mut asteroids = roids.to_owned();
+fn group_by_angle(ps: &[Point], rel: &Point) -> HashMap<Angle, Vec<Point>> {
+    let mut angles: Vec<(Point, Angle)> = ps
+        .iter()
+        .filter(|&p| p != rel)
+        .map(|p| {
+            let a = Angle::from_f64((p.x - rel.x).atan2(p.y - rel.y).to_degrees());
+            (*p, a)
+        })
+        .collect();
+
+    angles.sort_by(|(a, _), (b, _)| {
+        rel.euclidean_distance(&a)
+            .partial_cmp(&rel.euclidean_distance(&b))
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    let mut m = HashMap::new();
+    for (p, a) in angles {
+        let e = m.entry(a).or_insert_with(Vec::new);
+        e.push(p);
+    }
+
+    m
+}
+
+fn sort_angles<T>(grouped: &HashMap<Angle, T>) -> Vec<Angle> {
+    let mut angles = Vec::new();
+    for (a, _) in grouped {
+        angles.push(*a);
+    }
+    angles.sort();
+    angles
+}
+
+fn imma_firin_mah_lazer(asteroids: &[Point], base: &Point) -> Vec<Point> {
+    let mut grouped = group_by_angle(asteroids, base);
     let mut vaporized = Vec::with_capacity(asteroids.len());
-    let mut angle = 0.;
-    let mut count = 0;
+    let angles = sort_angles(&grouped);
 
-    while !asteroids.is_empty() {
-        if let Some(idx) = first_in_line(&asteroids, base, angle) {
-            let removed = asteroids.remove(idx);
-            println!("{} went poof! {} to go", removed, asteroids.len());
-            vaporized.push(removed);
-            count += 1;
-        }
-
-        angle += 0.5;
-        if angle > 360.0 {
-            angle = 0.0;
-        }
-        if count > 200 {
-            return vaporized;
+    while vaporized.len() < asteroids.len() - 1 {
+        println!(
+            "vaporized: {}, asteroids: {}",
+            vaporized.len(),
+            asteroids.len(),
+        );
+        for a in &angles {
+            if let Some(ps) = grouped.get_mut(a) {
+                if let Some(p) = ps.pop() {
+                    println!("{} went poof!", p);
+                    vaporized.push(p);
+                }
+            }
         }
     }
 
     vaporized
-}
-
-fn first_in_line(asteroids: &[Point], p: &Point, angle: f64) -> Option<usize> {
-    asteroids
-        .iter()
-        .enumerate()
-        // y = mx + b
-        .filter(|(_, x)| {
-            ((p.y - x.y).abs() / (p.x - x.x).abs()).tan().to_degrees() - angle.tan().to_degrees()
-                < THRESHOLD
-        })
-        .min_by(|a, b| {
-            p.euclidean_distance(&a.1)
-                .partial_cmp(&p.euclidean_distance(&b.1))
-                .unwrap_or(std::cmp::Ordering::Equal)
-        })
-        .map(|(i, _)| i)
 }
 
 #[aoc_generator(day10)]
@@ -87,7 +113,7 @@ pub fn input_generator(input: &str) -> Vec<Point> {
         .lines()
         .enumerate()
         .map(|(y, l)| {
-            l.chars().enumerate().filter_map(move |(x, p)| {
+            l.trim().chars().enumerate().filter_map(move |(x, p)| {
                 if p == '#' {
                     Some(Point::new(x as f64, y as f64))
                 } else {
@@ -234,5 +260,22 @@ mod test {
         assert!(is_in_line_of_sight(&asteroids, best, &asteroids[2]),);
         assert!(is_in_line_of_sight(&asteroids, best, &asteroids[3]),);
         assert!(is_in_line_of_sight(&asteroids, best, &asteroids[4]),);
+    }
+
+    #[test]
+    fn example_2_1() {
+        let input = &input_generator(
+            r#".#....#####...#..
+            ##...##.#####..##
+            ##...#...#.#####.
+            ..#.....X...###..
+            ..#.#.....#....##"#,
+        );
+
+        let (base, _) = find_best_place(&input);
+        let ps = imma_firin_mah_lazer(&input, &base);
+
+        assert_eq!(ps[0], Point { x: 8., y: 1. });
+        assert_eq!(ps[1], Point { x: 9., y: 0. });
     }
 }
