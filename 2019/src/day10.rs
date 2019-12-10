@@ -1,5 +1,7 @@
 use crate::point::Point;
 
+const THRESHOLD: f64 = 0.000_1;
+
 fn is_in_line_of_sight(asteroids: &[Point], a: &Point, b: &Point) -> bool {
     asteroids
         .iter()
@@ -9,7 +11,7 @@ fn is_in_line_of_sight(asteroids: &[Point], a: &Point, b: &Point) -> bool {
             let len_ax = a.euclidean_distance(x);
             let len_bx = b.euclidean_distance(x);
 
-            (len_ax + len_bx) - len_ab <= 0.000_1
+            (len_ax + len_bx) - len_ab <= THRESHOLD
         })
         .is_none()
 }
@@ -34,6 +36,49 @@ fn find_best_place(asteroids: &[Point]) -> (&Point, usize) {
     }
 
     max
+}
+
+fn imma_firin_mah_lazer(roids: &[Point], base: &Point) -> Vec<Point> {
+    let mut asteroids = roids.to_owned();
+    let mut vaporized = Vec::with_capacity(asteroids.len());
+    let mut angle = 0.;
+    let mut count = 0;
+
+    while !asteroids.is_empty() {
+        if let Some(idx) = first_in_line(&asteroids, base, angle) {
+            let removed = asteroids.remove(idx);
+            println!("{} went poof! {} to go", removed, asteroids.len());
+            vaporized.push(removed);
+            count += 1;
+        }
+
+        angle += 0.5;
+        if angle > 360.0 {
+            angle = 0.0;
+        }
+        if count > 200 {
+            return vaporized;
+        }
+    }
+
+    vaporized
+}
+
+fn first_in_line(asteroids: &[Point], p: &Point, angle: f64) -> Option<usize> {
+    asteroids
+        .iter()
+        .enumerate()
+        // y = mx + b
+        .filter(|(_, x)| {
+            ((p.y - x.y).abs() / (p.x - x.x).abs()).tan().to_degrees() - angle.tan().to_degrees()
+                < THRESHOLD
+        })
+        .min_by(|a, b| {
+            p.euclidean_distance(&a.1)
+                .partial_cmp(&p.euclidean_distance(&b.1))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(i, _)| i)
 }
 
 #[aoc_generator(day10)]
@@ -61,8 +106,12 @@ fn answer_1(input: &[Point]) -> usize {
 }
 
 #[aoc(day10, part2)]
-fn answer_2(input: &[Point]) -> usize {
-    0
+fn answer_2(input: &[Point]) -> i64 {
+    let (base, _) = find_best_place(input);
+    let vaporized = imma_firin_mah_lazer(input, base);
+    let last = vaporized.get(200).expect("200th asteroid not found");
+
+    (last.x * 100.0 + last.y) as i64
 }
 
 #[cfg(test)]
