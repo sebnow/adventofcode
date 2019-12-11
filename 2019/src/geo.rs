@@ -1,7 +1,7 @@
 #[derive(Debug, PartialEq, Hash, Eq, Copy, Clone)]
 pub struct Point {
-    x: i64,
-    y: i64,
+    pub x: i64,
+    pub y: i64,
 }
 
 impl Point {

@@ -15,17 +15,7 @@ struct Robot {
     position: Point,
 }
 
-#[aoc_generator(day11)]
-pub fn input_generator(input: &str) -> Vec<i64> {
-    input
-        .lines()
-        .map(|l| l.split(',').map(|x| x.parse().unwrap()))
-        .flatten()
-        .collect()
-}
-
-#[aoc(day11, part1)]
-fn answer_1(input: &[i64]) -> Result<usize> {
+fn paint_hull(input: &[i64], starting_color: i64) -> Result<HashMap<Point, i64>> {
     let mut panels: HashMap<Point, i64> = HashMap::new();
     let mut painted: HashMap<Point, usize> = HashMap::new();
     let mut rbt = Robot {
@@ -33,6 +23,8 @@ fn answer_1(input: &[i64]) -> Result<usize> {
         direction: Direction::Up,
         position: Point::new(0, 0),
     };
+
+    panels.insert(rbt.position, starting_color);
 
     loop {
         let pos = rbt.position;
@@ -71,10 +63,43 @@ fn answer_1(input: &[i64]) -> Result<usize> {
         rbt.position = pos + rbt.direction.to_point();
     }
 
-    Ok(painted.len())
+    Ok(panels)
+}
+
+#[aoc_generator(day11)]
+pub fn input_generator(input: &str) -> Vec<i64> {
+    input
+        .lines()
+        .map(|l| l.split(',').map(|x| x.parse().unwrap()))
+        .flatten()
+        .collect()
+}
+
+#[aoc(day11, part1)]
+fn answer_1(input: &[i64]) -> Result<usize> {
+    Ok(paint_hull(input, BLACK)?.len())
 }
 
 #[aoc(day11, part2)]
-fn answer_2(input: &[i64]) -> usize {
-    0
+fn answer_2(input: &[i64]) -> Result<String> {
+    let hull = paint_hull(input, WHITE)?;
+
+    let min_x = hull.keys().map(|p| p.x).min().unwrap();
+    let min_y = hull.keys().map(|p| p.y).min().unwrap();
+    let max_x = hull.keys().map(|p| p.x).max().unwrap();
+    let max_y = hull.keys().map(|p| p.y).max().unwrap();
+
+    for y in min_y..=max_y {
+        for x in min_x..=max_x {
+            let p = Point::new(x, y);
+            let color = hull.get(&p).unwrap_or(&BLACK);
+            match color {
+                &BLACK => print!("░"),
+                &WHITE => print!("█"),
+                _ => return Err(anyhow!("invalid color")),
+            }
+        }
+        println!();
+    }
+    Ok("".to_string())
 }
