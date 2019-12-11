@@ -42,17 +42,3 @@ impl Direction {
         }
     }
 }
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_euclidean_distance() {
-        let a = Point::new(3, 2);
-        let b = Point::new(8, 14);
-
-        assert_eq!(a.euclidean_distance(&b), 13)
-    }
-}
-
