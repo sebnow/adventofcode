@@ -1,4 +1,6 @@
-use crate::point::Point;
+use aocutil::{self, EuclideanDistance};
+
+type Point = aocutil::Point<f64>;
 
 fn is_in_line_of_sight(asteroids: &[Point], a: &Point, b: &Point) -> bool {
     asteroids
