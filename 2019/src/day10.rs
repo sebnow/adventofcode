@@ -66,16 +66,11 @@ fn group_by_angle(ps: &[Point], rel: &Point) -> HashMap<Angle, Vec<Point>> {
         .map(|p| {
             let dx = p.x - rel.x;
             let dy = p.y - rel.y;
-            let radians = dx.atan2(dy);
+            let radians = dy.atan2(dx);
             let mut degrees = radians.to_degrees();
-            degrees -= 180.0;
             if degrees < 0. {
                 degrees += 360.;
             }
-            println!(
-                "Point {} has relative position ({}, {}) to {} with radians {} and degrees {}",
-                p, dx, dy, rel, radians, degrees
-            );
             (*p, Angle::from_f64(degrees))
         })
         .collect();
@@ -101,7 +96,6 @@ fn sort_angles<T>(grouped: &HashMap<Angle, T>) -> Vec<Angle> {
         angles.push(*a);
     }
     angles.sort_by(|a, b| a.0.abs().cmp(&b.0.abs()));
-    println!("{:?}", angles);
     angles
 }
 
@@ -109,20 +103,19 @@ fn imma_firin_mah_lazer(asteroids: &[Point], base: &Point) -> Vec<Point> {
     let mut grouped = group_by_angle(asteroids, base);
     let mut vaporized = Vec::with_capacity(asteroids.len());
     let angles = sort_angles(&grouped);
-    println!("{:?}", grouped);
 
+    let mut first = true;
     while vaporized.len() < asteroids.len() - 1 {
-        println!(
-            "vaporized: {}, asteroids: {}",
-            vaporized.len(),
-            asteroids.len(),
-        );
-        for a in &angles {
-            println!("Angle: {}", a);
+        let to_iter: Vec<&Angle> = if first {
+            first = false;
+            angles.iter().skip_while(|a| a.to_f64() < 270.0).collect()
+        } else {
+            angles.iter().collect()
+        };
+
+        for a in to_iter {
             if let Some(ps) = grouped.get_mut(a) {
                 if let Some(p) = ps.pop() {
-                    println!("First visible for angle {} is {}", a, p);
-                    println!("{} went poof!", p);
                     vaporized.push(p);
                 }
             }
@@ -160,9 +153,9 @@ fn answer_1(input: &[Point]) -> usize {
 fn answer_2(input: &[Point]) -> i64 {
     let (base, _) = find_best_place(input);
     let vaporized = imma_firin_mah_lazer(input, base);
-    let last = vaporized.get(200).expect("200th asteroid not found");
+    let last = vaporized.get(199).expect("200th asteroid not found");
 
-    (last.x * 100.0 + last.y) as i64
+    (last.y * 100.0 + last.x) as i64
 }
 
 #[cfg(test)]
@@ -175,10 +168,10 @@ mod test {
             8,
             answer_1(&input_generator(
                 r#".#..#
-.....
-#####
-....#
-...##"#
+                .....
+                #####
+                ....#
+                ...##"#
             ))
         );
     }
@@ -189,15 +182,15 @@ mod test {
             33,
             answer_1(&input_generator(
                 r#"......#.#.
-#..#.#....
-..#######.
-.#.#.###..
-.#..#.....
-..#....#.#
-#..#....#.
-.##.#..###
-##...#..#.
-.#....####"#
+                #..#.#....
+                ..#######.
+                .#.#.###..
+                .#..#.....
+                ..#....#.#
+                #..#....#.
+                .##.#..###
+                ##...#..#.
+                .#....####"#
             ))
         );
     }
@@ -208,15 +201,15 @@ mod test {
             35,
             answer_1(&input_generator(
                 r#"#.#...#.#.
-.###....#.
-.#....#...
-##.#.#.#.#
-....#.#.#.
-.##..###.#
-..#...##..
-..##....##
-......#...
-.####.###."#
+                .###....#.
+                .#....#...
+                ##.#.#.#.#
+                ....#.#.#.
+                .##..###.#
+                ..#...##..
+                ..##....##
+                ......#...
+                .####.###."#
             ))
         );
     }
@@ -227,15 +220,15 @@ mod test {
             41,
             answer_1(&input_generator(
                 r#".#..#..###
-####.###.#
-....###.#.
-..###.##.#
-##.##.#.#.
-....###..#
-..#.#..#.#
-#..#.#.###
-.##...##.#
-.....#.#.."#
+                ####.###.#
+                ....###.#.
+                ..###.##.#
+                ##.##.#.#.
+                ....###..#
+                ..#.#..#.#
+                #..#.#.###
+                .##...##.#
+                .....#.#.."#
             ))
         );
     }
@@ -246,25 +239,25 @@ mod test {
             210,
             answer_1(&input_generator(
                 r#".#..##.###...#######
-##.############..##.
-.#.######.########.#
-.###.#######.####.#.
-#####.##.#.##.###.##
-..#####..#.#########
-####################
-#.####....###.#.#.##
-##.#################
-#####.##.###..####..
-..######..##.#######
-####.##.####...##..#
-.#####..#.######.###
-##...#.##########...
-#.##########.#######
-.####.#.###.###.#.##
-....##.##.###..#####
-.#.#.###########.###
-#.#.#.#####.####.###
-###.##.####.##.#..##"#
+                ##.############..##.
+                .#.######.########.#
+                .###.#######.####.#.
+                #####.##.#.##.###.##
+                ..#####..#.#########
+                ####################
+                #.####....###.#.#.##
+                ##.#################
+                #####.##.###..####..
+                ..######..##.#######
+                ####.##.####...##..#
+                .#####..#.######.###
+                ##...#.##########...
+                #.##########.#######
+                .####.#.###.###.#.##
+                ....##.##.###..#####
+                .#.#.###########.###
+                #.#.#.#####.####.###
+                ###.##.####.##.#..##"#
             ))
         );
     }
@@ -273,10 +266,10 @@ mod test {
     fn test_los() {
         let asteroids = input_generator(
             r#".#..#
-.....
-#####
-....#
-...##"#,
+            .....
+            #####
+            ....#
+            ...##"#,
         );
 
         let best = &asteroids[8];
@@ -291,16 +284,28 @@ mod test {
     fn example_2_1() {
         let input = &input_generator(
             r#".#....#####...#..
-##...##.#####..##
-##...#...#.#####.
-..#.....#...###..
-..#.#.....#....##"#,
+            ##...##.#####..##
+            ##...#...#.#####.
+            ..#.....#...###..
+            ..#.#.....#....##"#,
         );
 
         let (base, _) = find_best_place(&input);
         let ps = imma_firin_mah_lazer(&input, &base);
 
-        assert_eq!(ps[0], Point { x: 8., y: 1. });
-        assert_eq!(ps[1], Point { x: 9., y: 0. });
+        assert_eq!(
+            ps,
+            [
+                Point::new(8., 1.),
+                Point::new(9., 0.),
+                Point::new(9., 1.),
+                Point::new(10., 0.),
+                Point::new(9., 2.),
+                Point::new(11., 1.),
+                Point::new(12., 1.),
+                Point::new(11., 2.),
+                Point::new(15., 1.),
+            ]
+        );
     }
 }
