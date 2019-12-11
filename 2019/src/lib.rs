@@ -4,8 +4,6 @@ extern crate aoc_runner;
 extern crate aoc_runner_derive;
 
 pub mod intcode;
-pub mod point;
-pub mod geo;
 
 pub mod day01;
 pub mod day02;

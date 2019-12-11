@@ -1,6 +1,6 @@
-use crate::geo::{Direction, Point};
 use crate::intcode::{Interpretor, State};
 use anyhow::{anyhow, Result};
+use aocutil::{self, Direction};
 use std::collections::HashMap;
 
 const BLACK: i64 = 0;
@@ -8,6 +8,8 @@ const WHITE: i64 = 1;
 
 const LEFT: i64 = 0;
 const RIGHT: i64 = 1;
+
+type Point = aocutil::Point<i64>;
 
 struct Robot {
     brain: Interpretor,
@@ -60,7 +62,7 @@ fn paint_hull(input: &[i64], starting_color: i64) -> Result<HashMap<Point, i64>>
             State::Terminated(_) => return Err(anyhow!("expected second input")),
         }
 
-        rbt.position = pos + rbt.direction.to_point();
+        rbt.position = pos + rbt.direction.into();
     }
 
     Ok(panels)

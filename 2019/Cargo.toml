@@ -13,3 +13,5 @@ aoc-runner-derive = "^0.2.2"
 anyhow = "^1.0.25"
 itertools = "^0.8.2"
 permutohedron = "^0.2.4"
+
+aocutil = {path = "../aocutil"}
