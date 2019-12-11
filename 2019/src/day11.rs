@@ -86,22 +86,17 @@ fn answer_1(input: &[i64]) -> Result<usize> {
 fn answer_2(input: &[i64]) -> Result<String> {
     let hull = paint_hull(input, WHITE)?;
 
-    let min_x = hull.keys().map(|p| p.x).min().unwrap();
-    let min_y = hull.keys().map(|p| p.y).min().unwrap();
-    let max_x = hull.keys().map(|p| p.x).max().unwrap();
-    let max_y = hull.keys().map(|p| p.y).max().unwrap();
-
-    for y in min_y..=max_y {
-        for x in min_x..=max_x {
-            let p = Point::new(x, y);
-            let color = hull.get(&p).unwrap_or(&BLACK);
-            match color {
-                &BLACK => print!("░"),
-                &WHITE => print!("█"),
-                _ => return Err(anyhow!("invalid color")),
-            }
-        }
-        println!();
+    let mut g = aocutil::Grid::new();
+    for (p, c) in hull {
+        g.add(
+            p,
+            match c {
+                BLACK => '░',
+                WHITE => '█',
+                _ => panic!("not a color"),
+            },
+        );
     }
-    Ok("".to_string())
+
+    Ok(format!("\n{}", g))
 }

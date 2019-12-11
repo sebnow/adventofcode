@@ -3,6 +3,9 @@ use anyhow::{anyhow, Result};
 const HEIGHT: usize = 6;
 const WIDTH: usize = 25;
 
+type Grid = aocutil::Grid<Color>;
+type Point = aocutil::Point<i64>;
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Color {
     Black,
@@ -43,60 +46,28 @@ impl std::str::FromStr for Color {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub struct Image {
-    width: usize,
-    height: usize,
-    pixels: Vec<Color>,
-}
+pub fn decode(input: &[Color], width: usize, height: usize) -> Result<Grid> {
+    let mut g = Grid::default();
+    let layers: Vec<&[Color]> = input.chunks(width * height).collect();
 
-impl Image {
-    pub fn new(width: usize, height: usize) -> Self {
-        let mut pixels = Vec::with_capacity(width * height);
-        pixels.resize_with(pixels.capacity(), Default::default);
-
-        Image {
-            width,
-            height,
-            pixels,
+    for y in 0..height {
+        for x in 0..width {
+            let i = y * width + x;
+            let p = layers
+                .iter()
+                .find_map(|l| {
+                    if l[i] != Color::Transparent {
+                        Some(l[i])
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or(Color::Transparent);
+            g.add(Point::new(x as i64, (height - 1 - y) as i64), p);
         }
     }
 
-    pub fn replace_linear(&mut self, i: usize, p: Color) {
-        self.pixels[i] = p;
-    }
-}
-
-impl std::fmt::Display for Image {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (i, p) in self.pixels.iter().enumerate() {
-            write!(f, "{}{}", if i % self.width == 0 { "\n" } else { "" }, p)?;
-        }
-        Ok(())
-    }
-}
-
-pub fn decode(input: &[Color], width: usize, height: usize) -> Result<Image> {
-    let size = width * height;
-    let layers: Vec<&[Color]> = input.chunks(size).collect();
-    let mut image = Image::new(width, height);
-
-    for i in 0..size {
-        let p = layers
-            .iter()
-            .find_map(|l| {
-                if l[i] != Color::Transparent {
-                    Some(l[i])
-                } else {
-                    None
-                }
-            })
-            .unwrap_or(Color::Transparent);
-
-        image.replace_linear(i, p);
-    }
-
-    Ok(image)
+    Ok(g)
 }
 
 #[aoc_generator(day8)]
@@ -125,8 +96,8 @@ fn answer_1(input: &[Color]) -> Result<usize> {
 }
 
 #[aoc(day8, part2)]
-fn answer_2(input: &[Color]) -> Result<Image> {
-    decode(input, WIDTH, HEIGHT)
+fn answer_2(input: &[Color]) -> Result<String> {
+    Ok(format!("\n{}", decode(input, WIDTH, HEIGHT)?))
 }
 
 #[cfg(test)]
@@ -135,14 +106,14 @@ mod test {
 
     #[test]
     fn examples_2() {
-        let mut image = Image::new(2, 2);
-        image.replace_linear(0, Color::Black);
-        image.replace_linear(1, Color::White);
-        image.replace_linear(2, Color::White);
-        image.replace_linear(3, Color::Black);
+        let mut g = Grid::default();
+        g.add(Point::new(0, 0), Color::White);
+        g.add(Point::new(1, 0), Color::Black);
+        g.add(Point::new(0, 1), Color::Black);
+        g.add(Point::new(1, 1), Color::White);
 
         assert_eq!(
-            image,
+            g,
             decode(&input_generator("0222112222120000"), 2, 2).unwrap()
         );
     }
