@@ -2,14 +2,24 @@ use crate::point::Point;
 use std::collections::HashMap;
 
 const THRESHOLD: f64 = 0.000_1;
-const PRECISION: f64 = 100_000_000.0;
+const PRECISION: f64 = 1_000_000.0;
 
-#[derive(Hash, Eq, PartialEq, PartialOrd, Ord, Copy, Clone)]
+#[derive(Hash, Eq, PartialEq, PartialOrd, Ord, Copy, Clone, Debug)]
 struct Angle(i64);
 
 impl Angle {
     pub fn from_f64(a: f64) -> Self {
         Angle((a * PRECISION) as i64)
+    }
+
+    pub fn to_f64(&self) -> f64 {
+        self.0 as f64 / PRECISION
+    }
+}
+
+impl std::fmt::Display for Angle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_f64())
     }
 }
 
@@ -54,8 +64,19 @@ fn group_by_angle(ps: &[Point], rel: &Point) -> HashMap<Angle, Vec<Point>> {
         .iter()
         .filter(|&p| p != rel)
         .map(|p| {
-            let a = Angle::from_f64((p.x - rel.x).atan2(p.y - rel.y).to_degrees());
-            (*p, a)
+            let dx = p.x - rel.x;
+            let dy = p.y - rel.y;
+            let radians = dx.atan2(dy);
+            let mut degrees = radians.to_degrees();
+            degrees -= 180.0;
+            if degrees < 0. {
+                degrees += 360.;
+            }
+            println!(
+                "Point {} has relative position ({}, {}) to {} with radians {} and degrees {}",
+                p, dx, dy, rel, radians, degrees
+            );
+            (*p, Angle::from_f64(degrees))
         })
         .collect();
 
@@ -68,7 +89,7 @@ fn group_by_angle(ps: &[Point], rel: &Point) -> HashMap<Angle, Vec<Point>> {
     let mut m = HashMap::new();
     for (p, a) in angles {
         let e = m.entry(a).or_insert_with(Vec::new);
-        e.push(p);
+        e.insert(0, p);
     }
 
     m
@@ -79,7 +100,8 @@ fn sort_angles<T>(grouped: &HashMap<Angle, T>) -> Vec<Angle> {
     for (a, _) in grouped {
         angles.push(*a);
     }
-    angles.sort();
+    angles.sort_by(|a, b| a.0.abs().cmp(&b.0.abs()));
+    println!("{:?}", angles);
     angles
 }
 
@@ -87,6 +109,7 @@ fn imma_firin_mah_lazer(asteroids: &[Point], base: &Point) -> Vec<Point> {
     let mut grouped = group_by_angle(asteroids, base);
     let mut vaporized = Vec::with_capacity(asteroids.len());
     let angles = sort_angles(&grouped);
+    println!("{:?}", grouped);
 
     while vaporized.len() < asteroids.len() - 1 {
         println!(
@@ -95,8 +118,10 @@ fn imma_firin_mah_lazer(asteroids: &[Point], base: &Point) -> Vec<Point> {
             asteroids.len(),
         );
         for a in &angles {
+            println!("Angle: {}", a);
             if let Some(ps) = grouped.get_mut(a) {
                 if let Some(p) = ps.pop() {
+                    println!("First visible for angle {} is {}", a, p);
                     println!("{} went poof!", p);
                     vaporized.push(p);
                 }
@@ -266,10 +291,10 @@ mod test {
     fn example_2_1() {
         let input = &input_generator(
             r#".#....#####...#..
-            ##...##.#####..##
-            ##...#...#.#####.
-            ..#.....X...###..
-            ..#.#.....#....##"#,
+##...##.#####..##
+##...#...#.#####.
+..#.....#...###..
+..#.#.....#....##"#,
         );
 
         let (base, _) = find_best_place(&input);
