@@ -63,7 +63,7 @@ fn answer_1(input: &[Point]) -> usize {
 }
 
 #[aoc(day10, part2)]
-fn answer_2(input: &[Point]) -> usize {
+fn answer_2(_input: &[Point]) -> usize {
     0
 }
 
