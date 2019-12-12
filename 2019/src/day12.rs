@@ -108,8 +108,18 @@ fn answer_1(input: &[Point3D]) -> Result<i64> {
 }
 
 #[aoc(day12, part2)]
-fn answer_2(_input: &[Point3D]) -> Result<usize> {
-    Ok(0)
+fn answer_2(input: &[Point3D]) -> Result<usize> {
+    let mut moons = map_moons(input);
+    let initial = moons.to_owned();
+
+    let steps = 1;
+    tick(&mut moons);
+
+    while initial != moons {
+        tick(&mut moons);
+    }
+
+    Ok(steps)
 }
 
 #[cfg(test)]
