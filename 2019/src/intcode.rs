@@ -50,10 +50,12 @@ impl std::fmt::Display for Op {
 pub enum State {
     Suspended(i64),
     Terminated(Option<i64>),
+    AwaitingInput,
 }
 
 enum InstrResult {
     Suspend(i64),
+    AwaitInput,
     Terminate,
     Continue,
 }
@@ -103,6 +105,7 @@ impl Interpretor {
                 InstrResult::Terminate => {
                     return Ok(State::Terminated(self.outputs.iter().last().copied()))
                 }
+                InstrResult::AwaitInput => return Ok(State::AwaitingInput),
                 InstrResult::Continue => continue,
             }
         }
@@ -112,6 +115,7 @@ impl Interpretor {
         loop {
             match self.run()? {
                 State::Terminated(x) => return Ok(x),
+                State::AwaitingInput => return Err(anyhow!("expected input")),
                 State::Suspended(_) => continue,
             }
         }
@@ -162,12 +166,18 @@ impl Interpretor {
                 Ok(InstrResult::Continue)
             }
             Op::Input(a) => {
-                let v = self
-                    .inputs
-                    .pop_front()
-                    .ok_or_else(|| anyhow!("missing input"))?;
-                self.set(a, v)?;
-                Ok(InstrResult::Continue)
+                match self.inputs.pop_front() {
+                    Some(v) => {
+                        self.set(a, v)?;
+                        Ok(InstrResult::Continue)
+                    }
+                    None => {
+                        // Push Input operator back so that it gets processed again when the
+                        // interpretor is resumed
+                        self.ip = self.ip - 2;
+                        Ok(InstrResult::AwaitInput)
+                    }
+                }
             }
             Op::Output(out) => {
                 let v = self.get_value(out);

@@ -62,6 +62,20 @@ where
     }
 }
 
+impl<T> From<&HashMap<Point<i64>, T>> for Grid<T>
+where
+    T: std::fmt::Display + Copy,
+{
+    fn from(m: &HashMap<Point<i64>, T>) -> Grid<T> {
+        let mut grid = Grid::default();
+        for (p, v) in m {
+            grid.add(*p, *v);
+        }
+
+        grid
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
