@@ -39,6 +39,7 @@ fn get_chained_signal(phases: &[i64], memory: &[i64]) -> Result<i64> {
                         continue;
                     }
                 }
+                State::AwaitingInput => return Err(anyhow!("expected input")),
             }
         }
     }

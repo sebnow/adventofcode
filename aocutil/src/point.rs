@@ -72,6 +72,33 @@ where
     }
 }
 
+impl<T> From<(T, T)> for Point<T> {
+    fn from((x, y): (T, T)) -> Self {
+        Point::new(x, y)
+    }
+}
+
+impl<T> Into<(T, T)> for Point<T> {
+    fn into(self) -> (T, T) {
+        (self.x, self.y)
+    }
+}
+
+impl<T> From<[T; 2]> for Point<T>
+where
+    T: Copy,
+{
+    fn from(v: [T; 2]) -> Self {
+        Point::new(v[0], v[1])
+    }
+}
+
+impl<T> Into<[T; 2]> for Point<T> {
+    fn into(self) -> [T; 2] {
+        [self.x, self.y]
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

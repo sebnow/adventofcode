@@ -39,6 +39,7 @@ fn paint_hull(input: &[i64], starting_color: i64) -> Result<HashMap<Point, i64>>
                 *painted.entry(pos).or_insert(0) += 1;
             }
             State::Terminated(_) => break,
+            State::AwaitingInput => return Err(anyhow!("expected input")),
         }
 
         match rbt.brain.run()? {
@@ -60,6 +61,7 @@ fn paint_hull(input: &[i64], starting_color: i64) -> Result<HashMap<Point, i64>>
                 }
             }
             State::Terminated(_) => return Err(anyhow!("expected second input")),
+            State::AwaitingInput => return Err(anyhow!("expected input")),
         }
 
         rbt.position = pos + rbt.direction.into();
