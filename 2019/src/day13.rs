@@ -14,7 +14,7 @@ pub fn input_generator(input: &str) -> Vec<i64> {
 fn answer_1(input: &[i64]) -> Result<usize> {
     let mut game = Game::new(input);
     while !game.is_over() {
-        game.update();
+        game.update()?;
     }
 
     Ok(game.count_blocks())
@@ -27,7 +27,7 @@ fn answer_2(input: &[i64]) -> Result<i64> {
 
     let mut game = Game::new(&input);
     while !game.is_over() {
-        game.update();
+        game.update()?;
     }
 
     Ok(game.get_score())

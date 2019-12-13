@@ -7,7 +7,7 @@ use std::convert::TryFrom;
 type Point = aocutil::Point<i64>;
 
 #[derive(PartialEq, Copy, Clone)]
-enum Tile {
+pub enum Tile {
     Empty,
     Wall,
     Block,
@@ -48,6 +48,7 @@ impl TryFrom<i64> for Tile {
 }
 
 pub struct Game {
+    init: bool,
     over: bool,
     score: i64,
     paddle: Point,
@@ -75,6 +76,7 @@ impl From<Input> for i64 {
 impl Game {
     pub fn new(rom: &[i64]) -> Self {
         Game {
+            init: false,
             over: false,
             score: 0,
             prg: intcode::Interpretor::new(rom),
@@ -97,10 +99,8 @@ impl Game {
                 } else {
                     let point = Point::new(x, 0 - y);
                     let tile = Tile::try_from(v)?;
+                    self.grid.insert(point, tile);
                     match tile {
-                        Tile::Block => {
-                            self.grid.insert(point, tile);
-                        }
                         Tile::Ball => self.ball = point,
                         Tile::HorizontalPaddle => self.paddle = point,
                         Tile::Empty => {
@@ -111,6 +111,7 @@ impl Game {
                 }
             }
             intcode::State::AwaitingInput => {
+                self.init = true;
                 let input = match self.paddle.x.cmp(&self.ball.x) {
                     std::cmp::Ordering::Less => Input::JoystickRight,
                     std::cmp::Ordering::Greater => Input::JoystickLeft,
@@ -126,12 +127,20 @@ impl Game {
         Ok(())
     }
 
+    pub fn is_initialized(&self) -> bool {
+        self.init
+    }
+
     pub fn is_over(&self) -> bool {
         self.over
     }
 
     pub fn get_score(&self) -> i64 {
         self.score
+    }
+
+    pub fn get_tiles<'a>(&'a self) -> &'a HashMap<Point, Tile> {
+        &self.grid
     }
 
     pub fn count_blocks(&self) -> usize {

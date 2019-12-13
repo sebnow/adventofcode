@@ -1,5 +1,13 @@
 use crate::Point;
+use anyhow::Result;
 use std::collections::HashMap;
+
+use std::io;
+use std::io::Write;
+
+use termion::cursor::HideCursor;
+use termion::raw::IntoRawMode;
+use termion::screen::AlternateScreen;
 
 #[derive(Debug)]
 pub struct Grid<T> {
@@ -8,7 +16,10 @@ pub struct Grid<T> {
     points: HashMap<Point<i64>, T>,
 }
 
-impl<T> Grid<T> {
+impl<T> Grid<T>
+where
+    T: std::fmt::Display,
+{
     pub fn new() -> Self {
         Grid::default()
     }
@@ -17,6 +28,26 @@ impl<T> Grid<T> {
         self.top_left = Point::new(self.top_left.x.min(p.x), self.top_left.y.max(p.y));
         self.bottom_right = Point::new(self.bottom_right.x.max(p.x), self.bottom_right.y.min(p.y));
         self.points.insert(p, v);
+    }
+
+    pub fn render(&self) -> Result<()> {
+        let stdout = io::stdout().into_raw_mode()?;
+        let stdout = HideCursor::from(stdout);
+        let mut stdout = AlternateScreen::from(stdout);
+
+        write!(stdout, "{}", termion::clear::All)?;
+        for (p, v) in &self.points {
+            let p = Point::new(self.top_left.x + p.x + 1, self.top_left.y - p.y + 1);
+            write!(
+                stdout,
+                "{}{}",
+                termion::cursor::Goto(p.x as u16, p.y as u16),
+                v
+            )?;
+        }
+
+        stdout.flush()?;
+        Ok(())
     }
 }
 
