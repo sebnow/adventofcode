@@ -77,6 +77,7 @@ impl std::fmt::Display for Param {
     }
 }
 
+#[derive(Clone)]
 pub struct Interpretor {
     ip: usize,
     rb: usize,
