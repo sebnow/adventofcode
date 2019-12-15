@@ -154,6 +154,42 @@ fn build_map(prg: &intcode::Interpretor) -> Result<(Map, Option<Robot>)> {
     Ok((map, found))
 }
 
+fn fill(map: &Map, origin: &Point) -> Result<usize> {
+    let mut map = map.clone();
+    let directions = [
+        Movement::North,
+        Movement::East,
+        Movement::West,
+        Movement::South,
+    ];
+    let mut oxygen = Vec::new();
+    let mut to_fill = VecDeque::new();
+    to_fill.push_front((*origin, 0));
+
+    while let Some((p, minutes)) = to_fill.pop_front() {
+        oxygen.push((p, minutes));
+        map.insert(p, Tile::Oxygen);
+
+        for &m in &directions {
+            let new_pos = p + m.into();
+            match map.get(&new_pos) {
+                Some(Tile::Wall) => continue,
+                Some(Tile::Oxygen) => continue,
+                Some(Tile::Empty) => {
+                    to_fill.push_back((new_pos, minutes + 1));
+                }
+                None => return Err(anyhow!("something went wrong")),
+            }
+        }
+    }
+
+    Ok(oxygen
+        .iter()
+        .max_by(|(_, a), (_, b)| a.cmp(b))
+        .map(|(_, m)| *m)
+        .unwrap())
+}
+
 #[aoc_generator(day15)]
 pub fn input_generator(input: &str) -> Vec<i64> {
     input
@@ -173,5 +209,9 @@ fn answer_1(input: &[i64]) -> Result<usize> {
 
 #[aoc(day15, part2)]
 fn answer_2(input: &[i64]) -> Result<usize> {
-    Ok(0)
+    let prg = intcode::Interpretor::new(input);
+    let (map, robot) = build_map(&prg)?;
+
+    let minutes = fill(&map, &robot.unwrap().pos)?;
+    Ok(minutes)
 }
