@@ -1,15 +1,42 @@
 use crate::intcode;
 use anyhow::{anyhow, Result};
 use aocutil::Direction;
+use aocutil::Grid;
 use std::collections::VecDeque;
 
-type Tile = i64;
-const SCAFFOLD: Tile = b'#' as i64;
-const OPEN_SPACE: Tile = b'.' as i64;
-const NL: Tile = b'\n' as i64;
+const SCAFFOLD: Tile = Tile(b'#' as i64);
+const OPEN_SPACE: Tile = Tile(b'.' as i64);
+const NL: i64 = b'\n' as i64;
 
 type Point = aocutil::Point<i64>;
 
+#[derive(PartialEq, Clone, Copy, Debug)]
+struct Tile(i64);
+
+impl Tile {
+    pub fn new(code: i64) -> Self {
+        Tile(code)
+    }
+
+    pub fn is_walkable(&self) -> bool {
+        match self.as_char() {
+            '^' | '>' | '<' | 'v' | 'X' | '#' => true,
+            _ => false,
+        }
+    }
+
+    pub fn as_char(&self) -> char {
+        (self.0 as u8) as char
+    }
+}
+
+impl std::fmt::Display for Tile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_char())
+    }
+}
+
+#[derive(Debug)]
 struct Turn {
     relative: char,
     absolute: Direction,
@@ -28,16 +55,15 @@ impl Turn {
 
         let (dx, dy) = (b.x - a.x, b.y - a.y);
 
-        println!("{:?} ({}, {})", dir, dx, dy);
         match (dir, dx, dy) {
-            (Right, 0, 1) => Some(Turn::new(Up, 'L')),
-            (Right, 0, -1) => Some(Turn::new(Down, 'R')),
-            (Left, 0, 1) => Some(Turn::new(Down, 'R')),
-            (Left, 0, -1) => Some(Turn::new(Up, 'L')),
             (Up, 1, 0) => Some(Turn::new(Right, 'R')),
             (Up, -1, 0) => Some(Turn::new(Left, 'L')),
-            (Down, 1, 0) => Some(Turn::new(Left, 'L')),
-            (Down, -1, 0) => Some(Turn::new(Right, 'R')),
+            (Right, 0, 1) => Some(Turn::new(Up, 'L')),
+            (Right, 0, -1) => Some(Turn::new(Down, 'R')),
+            (Down, 1, 0) => Some(Turn::new(Right, 'L')),
+            (Down, -1, 0) => Some(Turn::new(Left, 'R')),
+            (Left, 0, 1) => Some(Turn::new(Up, 'R')),
+            (Left, 0, -1) => Some(Turn::new(Down, 'L')),
             _ => None,
         }
     }
@@ -57,7 +83,7 @@ fn build_map(input: &[i64]) -> Result<Vec<Vec<Tile>>> {
                     current = Vec::with_capacity(len);
                 }
                 _ => {
-                    current.push(o);
+                    current.push(Tile::new(o));
                 }
             },
             intcode::State::AwaitingInput => return Err(anyhow!("unexpectedly awaiting input")),
@@ -68,26 +94,33 @@ fn build_map(input: &[i64]) -> Result<Vec<Vec<Tile>>> {
     Ok(map)
 }
 
-fn get_neighbours(map: &[Vec<Tile>], p: Point) -> Vec<(Point, Tile)> {
+fn build_grid(input: &[i64]) -> Result<Grid<Tile>> {
+    let map = build_map(input)?;
+    let height = map.len();
+    let mut grid = Grid::new();
+    for (y, r) in map.iter().enumerate() {
+        for (x, &t) in r.iter().enumerate() {
+            grid.add(Point::new(x as i64, (height - y) as i64), t);
+        }
+    }
+
+    Ok(grid)
+}
+
+fn get_neighbours(grid: &Grid<Tile>, p: Point) -> Vec<(Point, Tile)> {
     [
-        (p.x - 1, p.y),
-        (p.x + 1, p.y),
-        (p.x, p.y - 1),
-        (p.x, p.y + 1),
+        Point::new(p.x - 1, p.y),
+        Point::new(p.x + 1, p.y),
+        Point::new(p.x, p.y - 1),
+        Point::new(p.x, p.y + 1),
     ]
     .iter()
-    .filter_map(|&(nx, ny)| {
-        if nx < 0 || ny < 0 || ny >= map.len() as i64 || nx >= map[ny as usize].len() as i64 {
-            None
-        } else {
-            Some((Point::new(nx, ny), map[ny as usize][nx as usize]))
-        }
-    })
+    .filter_map(|&adjacent| grid.at(adjacent).map(|&t| (adjacent, t)))
     .collect()
 }
 
-fn get_neighbour_scaffolds(map: &[Vec<Tile>], p: Point) -> Vec<(Point, Tile)> {
-    get_neighbours(map, p)
+fn get_neighbour_scaffolds(grid: &Grid<Tile>, p: Point) -> Vec<(Point, Tile)> {
+    get_neighbours(grid, p)
         .iter()
         .filter(|(_, t)| *t == SCAFFOLD)
         .copied()
@@ -111,69 +144,76 @@ impl Robot {
     }
 }
 
-fn find_robots(map: &[Vec<Tile>]) -> Vec<Robot> {
-    for (x, r) in map.iter().enumerate() {
-        for (y, t) in r.iter().enumerate() {
-            let p = Point::new(x as i64, y as i64);
-            let robots = match (*t as u8) as char {
-                '^' => vec![Robot::new(p, Direction::Up)],
-                '>' => vec![Robot::new(p, Direction::Right)],
-                '<' => vec![Robot::new(p, Direction::Left)],
-                'v' => vec![Robot::new(p, Direction::Down)],
-                'X' => vec![
-                    Robot::new(p, Direction::Up),
-                    Robot::new(p, Direction::Right),
-                    Robot::new(p, Direction::Down),
-                    Robot::new(p, Direction::Left),
-                ],
-                _ => continue,
-            };
+fn find_robots(grid: &Grid<Tile>) -> Vec<Robot> {
+    for (&p, &t) in grid.points.iter() {
+        let robots = match t.as_char() {
+            '^' => vec![Robot::new(p, Direction::Up)],
+            '>' => vec![Robot::new(p, Direction::Right)],
+            '<' => vec![Robot::new(p, Direction::Left)],
+            'v' => vec![Robot::new(p, Direction::Down)],
+            'X' => vec![
+                Robot::new(p, Direction::Up),
+                Robot::new(p, Direction::Right),
+                Robot::new(p, Direction::Down),
+                Robot::new(p, Direction::Left),
+            ],
+            _ => continue,
+        };
 
-            return robots;
-        }
+        return robots;
     }
 
     vec![]
 }
 
-fn find_paths(map: &[Vec<Tile>]) -> Vec<String> {
+fn find_paths(grid: &Grid<Tile>) -> Vec<String> {
     let mut paths = Vec::new();
-    let mut robots: VecDeque<Robot> = find_robots(map).into();
+    let mut robots: VecDeque<Robot> = find_robots(grid).into();
 
     while let Some(robot) = robots.pop_front() {
-        let tiles = get_neighbour_scaffolds(&map, robot.position);
-        println!("{:?}, {:?}", robot, tiles);
+        let tiles = get_neighbour_scaffolds(grid, robot.position);
         if tiles.is_empty() {
             panic!("orphaned?");
         }
 
         if tiles.len() == 1 {
+            let back = match robot.direction {
+                Direction::Up => Direction::Down,
+                Direction::Right => Direction::Left,
+                Direction::Down => Direction::Up,
+                Direction::Left => Direction::Left,
+            };
             // Can't go back so this path is complete
-            paths.push(robot.path.join(","));
-            continue;
+            if robot.position + back.into() == tiles[0].0 {
+                paths.push(robot.path.join(","));
+                continue;
+            }
         }
 
         // Queue other paths
         for (next_pos, _) in tiles {
             let mut new_robot = robot.clone();
-            println!("{:?}", new_robot);
             let turn = Turn::try_from_points(new_robot.direction, new_robot.position, next_pos);
+            // Can only go left or right
             if turn.is_none() {
                 continue;
             }
             let turn = turn.unwrap();
-            let mut steps = 0;
 
-            while map[new_robot.position.y as usize][new_robot.position.x as usize] == SCAFFOLD {
-                match turn.absolute {
-                    Direction::Up => new_robot.position.y += 1,
-                    Direction::Down => new_robot.position.y -= 1,
-                    Direction::Left => new_robot.position.x -= 1,
-                    Direction::Right => new_robot.position.x += 1,
+            let mut steps = 0;
+            let mut pos = new_robot.position + turn.absolute.into();
+            while let Some(t) = grid.at(pos) {
+                if !t.is_walkable() {
+                    break;
                 }
+
+                pos = pos + turn.absolute.into();
                 steps += 1;
             }
 
+            assert!(steps > 0, "appending path when no steps were taken");
+            new_robot.position = pos - turn.absolute.into();
+            new_robot.direction = turn.absolute;
             new_robot.path.push(format!("{},{}", turn.relative, steps));
             robots.push_back(new_robot);
         }
@@ -193,29 +233,27 @@ pub fn input_generator(input: &str) -> Vec<i64> {
 
 #[aoc(day17, part1)]
 fn answer_1(input: &[i64]) -> Result<usize> {
-    let map = build_map(input)?;
+    let grid = build_grid(input)?;
 
     let mut parameters = 0;
-    for (y, row) in map.iter().enumerate() {
-        for (x, &tile) in row.iter().enumerate() {
-            if tile == OPEN_SPACE {
-                continue;
-            }
+    for (&p, &tile) in grid.points.iter() {
+        if tile == OPEN_SPACE {
+            continue;
+        }
 
-            if get_neighbour_scaffolds(&map, Point::new(x as i64, y as i64)).len() == 4 {
-                parameters += x * y;
-            }
+        if get_neighbour_scaffolds(&grid, p).len() == 4 {
+            parameters += p.x * p.y;
         }
     }
-    Ok(parameters)
+    Ok(parameters as usize)
 }
 
 #[aoc(day17, part2)]
 fn answer_2(input: &[i64]) -> Result<usize> {
     let is_continuous = std::env::var("DEBUG").map(|x| x != "").unwrap_or(false);
-    let map = build_map(input)?;
+    let grid = build_grid(input)?;
 
-    let paths = find_paths(&map);
+    let paths = find_paths(&grid);
     for path in paths {
         println!("{}", path);
     }
@@ -240,14 +278,12 @@ fn answer_2(input: &[i64]) -> Result<usize> {
 
     loop {
         match prg.run()? {
-            intcode::State::Suspended(o) => {
-                print!(
-                    "{}",
-                    ((if o == OPEN_SPACE { b' ' as i64 } else { o }) as u8) as char
-                );
-            }
+            intcode::State::Suspended(o) => print!("{}", (o as u8) as char),
             intcode::State::AwaitingInput => return Err(anyhow!("unexpectedly awaiting input")),
-            intcode::State::Terminated(_) => break,
+            intcode::State::Terminated(dust) => {
+                println!("{:?}", dust);
+                break;
+            }
         }
     }
 

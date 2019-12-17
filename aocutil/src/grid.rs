@@ -13,7 +13,7 @@ use termion::screen::AlternateScreen;
 pub struct Grid<T> {
     top_left: Point<i64>,
     bottom_right: Point<i64>,
-    points: HashMap<Point<i64>, T>,
+    pub points: HashMap<Point<i64>, T>,
 }
 
 impl<T> Grid<T>
@@ -28,6 +28,10 @@ where
         self.top_left = Point::new(self.top_left.x.min(p.x), self.top_left.y.max(p.y));
         self.bottom_right = Point::new(self.bottom_right.x.max(p.x), self.bottom_right.y.min(p.y));
         self.points.insert(p, v);
+    }
+
+    pub fn at(&self, p: Point<i64>) -> Option<&T> {
+        self.points.get(&p)
     }
 
     pub fn render(&self) -> Result<()> {
@@ -48,6 +52,10 @@ where
 
         stdout.flush()?;
         Ok(())
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&Point<i64>, &T)> {
+        self.points.iter()
     }
 }
 
