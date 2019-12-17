@@ -46,6 +46,18 @@ where
     }
 }
 
+impl<T> std::ops::Sub for Point<T>
+where
+    T: std::ops::Sub<Output = T>,
+{
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        Point::new(self.x - other.x, self.y - other.y)
+    }
+}
+
+
 impl EuclideanDistance<f64> for Point<f64> {
     fn euclidean_distance(&self, other: &Self) -> f64 {
         ((other.x - self.x).powi(2) + (other.y - self.y).powi(2)).sqrt()
