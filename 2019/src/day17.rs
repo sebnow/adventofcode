@@ -1,10 +1,35 @@
 use crate::intcode;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 
 type Tile = i64;
-const SCAFFOLD: Tile = 35;
-const OPEN_SPACE: Tile = 46;
-const NL: Tile = 10;
+const SCAFFOLD: Tile = b'#' as i64;
+const OPEN_SPACE: Tile = b'.' as i64;
+const NL: Tile = b'\n' as i64;
+
+fn build_map(input: &[i64]) -> Result<Vec<Vec<Tile>>> {
+    let mut prg = intcode::Interpretor::new(input);
+    let mut map = Vec::new();
+    let mut current = Vec::new();
+
+    loop {
+        match prg.run()? {
+            intcode::State::Suspended(o) => match o {
+                NL => {
+                    let len = current.len();
+                    map.push(current);
+                    current = Vec::with_capacity(len);
+                }
+                _ => {
+                    current.push(o);
+                }
+            },
+            intcode::State::AwaitingInput => return Err(anyhow!("unexpectedly awaiting input")),
+            intcode::State::Terminated(_) => break,
+        }
+    }
+
+    Ok(map)
+}
 
 fn get_neighbours(map: &[Vec<Tile>], x: usize, y: usize) -> Vec<Tile> {
     let x = x as i64;
@@ -32,26 +57,7 @@ pub fn input_generator(input: &str) -> Vec<i64> {
 
 #[aoc(day17, part1)]
 fn answer_1(input: &[i64]) -> Result<usize> {
-    let mut prg = intcode::Interpretor::new(input);
-
-    let mut map = Vec::new();
-    let mut current = Vec::new();
-    loop {
-        match prg.run()? {
-            intcode::State::Suspended(o) => match o {
-                NL => {
-                    let len = current.len();
-                    map.push(current);
-                    current = Vec::with_capacity(len);
-                }
-                _ => {
-                    current.push(o);
-                }
-            },
-            intcode::State::AwaitingInput => panic!("wut"),
-            intcode::State::Terminated(_) => break,
-        }
-    }
+    let map = build_map(input)?;
 
     let mut parameters = 0;
     for (y, row) in map.iter().enumerate() {
@@ -65,11 +71,44 @@ fn answer_1(input: &[i64]) -> Result<usize> {
             }
         }
     }
-
     Ok(parameters)
 }
 
 #[aoc(day17, part2)]
 fn answer_2(input: &[i64]) -> Result<usize> {
+    let is_continuous = std::env::var("DEBUG").map(|x| x != "").unwrap_or(false);
+
+    let mut input = input.to_owned();
+    input[0] = 2;
+
+    let mut prg = intcode::Interpretor::new(&input);
+    // R,8,L,4,R,4,R,10
+    // R,8
+    // R,8,L,4,R,4,R,10
+    // R,8
+    // L,12,L,12
+    // R,8
+    // R,8
+    // R,8
+    prg.input_str("A,B,A,B,C,B,B,B\n");
+    prg.input_str("R,8,L,4,R,4,R,10\n");
+    prg.input_str("R,8\n");
+    prg.input_str("L,12,L,12\n");
+    prg.input_str(if is_continuous { "y\n" } else { "n\n" });
+
+    loop {
+        match prg.run()? {
+            intcode::State::Suspended(o) => {
+                print!(
+                    "{}",
+                    ((if o == OPEN_SPACE { b' ' as i64 } else { o }) as u8) as char
+                );
+            }
+            intcode::State::AwaitingInput => return Err(anyhow!("unexpectedly awaiting input")),
+            intcode::State::Terminated(_) => break,
+        }
+    }
+
+    println!();
     Ok(0)
 }

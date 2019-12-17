@@ -257,6 +257,12 @@ impl Interpretor {
         self.inputs.push_back(v);
     }
 
+    pub fn input_str(&mut self, inputs: &str) {
+        for v in inputs.chars().map(|c| c as i64) {
+            self.inputs.push_back(v);
+        }
+    }
+
     fn parse_instr_addi(&mut self, mut modes: &mut i64) -> Result<Op> {
         Ok(Op::Add(
             self.parse_param(&mut modes)
