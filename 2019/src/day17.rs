@@ -1,10 +1,47 @@
 use crate::intcode;
 use anyhow::{anyhow, Result};
+use aocutil::Direction;
+use std::collections::VecDeque;
 
 type Tile = i64;
 const SCAFFOLD: Tile = b'#' as i64;
 const OPEN_SPACE: Tile = b'.' as i64;
 const NL: Tile = b'\n' as i64;
+
+type Point = aocutil::Point<i64>;
+
+struct Turn {
+    relative: char,
+    absolute: Direction,
+}
+
+impl Turn {
+    pub fn new(abs: Direction, rel: char) -> Self {
+        Turn {
+            absolute: abs,
+            relative: rel,
+        }
+    }
+
+    pub fn try_from_points(dir: Direction, a: Point, b: Point) -> Option<Turn> {
+        use Direction::*;
+
+        let (dx, dy) = (b.x - a.x, b.y - a.y);
+
+        println!("{:?} ({}, {})", dir, dx, dy);
+        match (dir, dx, dy) {
+            (Right, 0, 1) => Some(Turn::new(Up, 'L')),
+            (Right, 0, -1) => Some(Turn::new(Down, 'R')),
+            (Left, 0, 1) => Some(Turn::new(Down, 'R')),
+            (Left, 0, -1) => Some(Turn::new(Up, 'L')),
+            (Up, 1, 0) => Some(Turn::new(Right, 'R')),
+            (Up, -1, 0) => Some(Turn::new(Left, 'L')),
+            (Down, 1, 0) => Some(Turn::new(Left, 'L')),
+            (Down, -1, 0) => Some(Turn::new(Right, 'R')),
+            _ => None,
+        }
+    }
+}
 
 fn build_map(input: &[i64]) -> Result<Vec<Vec<Tile>>> {
     let mut prg = intcode::Interpretor::new(input);
@@ -31,19 +68,118 @@ fn build_map(input: &[i64]) -> Result<Vec<Vec<Tile>>> {
     Ok(map)
 }
 
-fn get_neighbours(map: &[Vec<Tile>], x: usize, y: usize) -> Vec<Tile> {
-    let x = x as i64;
-    let y = y as i64;
-    [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
+fn get_neighbours(map: &[Vec<Tile>], p: Point) -> Vec<(Point, Tile)> {
+    [
+        (p.x - 1, p.y),
+        (p.x + 1, p.y),
+        (p.x, p.y - 1),
+        (p.x, p.y + 1),
+    ]
+    .iter()
+    .filter_map(|&(nx, ny)| {
+        if nx < 0 || ny < 0 || ny >= map.len() as i64 || nx >= map[ny as usize].len() as i64 {
+            None
+        } else {
+            Some((Point::new(nx, ny), map[ny as usize][nx as usize]))
+        }
+    })
+    .collect()
+}
+
+fn get_neighbour_scaffolds(map: &[Vec<Tile>], p: Point) -> Vec<(Point, Tile)> {
+    get_neighbours(map, p)
         .iter()
-        .filter_map(|&(nx, ny)| {
-            if nx < 0 || ny < 0 || ny >= map.len() as i64 || nx >= map[ny as usize].len() as i64 {
-                None
-            } else {
-                Some(map[ny as usize][nx as usize])
-            }
-        })
+        .filter(|(_, t)| *t == SCAFFOLD)
+        .copied()
         .collect()
+}
+
+#[derive(Clone, Debug)]
+struct Robot {
+    path: Vec<String>,
+    direction: Direction,
+    position: Point,
+}
+
+impl Robot {
+    pub fn new(p: Point, d: Direction) -> Self {
+        Robot {
+            path: Vec::default(),
+            direction: d,
+            position: p,
+        }
+    }
+}
+
+fn find_robots(map: &[Vec<Tile>]) -> Vec<Robot> {
+    for (x, r) in map.iter().enumerate() {
+        for (y, t) in r.iter().enumerate() {
+            let p = Point::new(x as i64, y as i64);
+            let robots = match (*t as u8) as char {
+                '^' => vec![Robot::new(p, Direction::Up)],
+                '>' => vec![Robot::new(p, Direction::Right)],
+                '<' => vec![Robot::new(p, Direction::Left)],
+                'v' => vec![Robot::new(p, Direction::Down)],
+                'X' => vec![
+                    Robot::new(p, Direction::Up),
+                    Robot::new(p, Direction::Right),
+                    Robot::new(p, Direction::Down),
+                    Robot::new(p, Direction::Left),
+                ],
+                _ => continue,
+            };
+
+            return robots;
+        }
+    }
+
+    vec![]
+}
+
+fn find_paths(map: &[Vec<Tile>]) -> Vec<String> {
+    let mut paths = Vec::new();
+    let mut robots: VecDeque<Robot> = find_robots(map).into();
+
+    while let Some(robot) = robots.pop_front() {
+        let tiles = get_neighbour_scaffolds(&map, robot.position);
+        println!("{:?}, {:?}", robot, tiles);
+        if tiles.is_empty() {
+            panic!("orphaned?");
+        }
+
+        if tiles.len() == 1 {
+            // Can't go back so this path is complete
+            paths.push(robot.path.join(","));
+            continue;
+        }
+
+        // Queue other paths
+        for (next_pos, _) in tiles {
+            let mut new_robot = robot.clone();
+            println!("{:?}", new_robot);
+            let turn = Turn::try_from_points(new_robot.direction, new_robot.position, next_pos);
+            if turn.is_none() {
+                continue;
+            }
+            let turn = turn.unwrap();
+            let mut steps = 0;
+
+            while map[new_robot.position.y as usize][new_robot.position.x as usize] == SCAFFOLD {
+                match turn.absolute {
+                    Direction::Up => new_robot.position.y += 1,
+                    Direction::Down => new_robot.position.y -= 1,
+                    Direction::Left => new_robot.position.x -= 1,
+                    Direction::Right => new_robot.position.x += 1,
+                }
+                steps += 1;
+            }
+
+            new_robot.path.push(format!("{},{}", turn.relative, steps));
+            robots.push_back(new_robot);
+        }
+    }
+
+    paths
 }
 
 #[aoc_generator(day17)]
@@ -66,7 +202,7 @@ fn answer_1(input: &[i64]) -> Result<usize> {
                 continue;
             }
 
-            if get_neighbours(&map, x, y).iter().all(|&t| t == SCAFFOLD) {
+            if get_neighbour_scaffolds(&map, Point::new(x as i64, y as i64)).len() == 4 {
                 parameters += x * y;
             }
         }
@@ -77,6 +213,12 @@ fn answer_1(input: &[i64]) -> Result<usize> {
 #[aoc(day17, part2)]
 fn answer_2(input: &[i64]) -> Result<usize> {
     let is_continuous = std::env::var("DEBUG").map(|x| x != "").unwrap_or(false);
+    let map = build_map(input)?;
+
+    let paths = find_paths(&map);
+    for path in paths {
+        println!("{}", path);
+    }
 
     let mut input = input.to_owned();
     input[0] = 2;
