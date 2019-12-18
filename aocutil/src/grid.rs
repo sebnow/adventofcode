@@ -30,8 +30,24 @@ where
         self.points.insert(p, v);
     }
 
-    pub fn at(&self, p: Point<i64>) -> Option<&T> {
-        self.points.get(&p)
+    pub fn remove(&mut self, p: &Point<i64>) -> Option<T> {
+        self.points.remove(p)
+    }
+
+    pub fn at(&self, p: &Point<i64>) -> Option<&T> {
+        self.points.get(p)
+    }
+
+    pub fn adjacent<'a>(&'a self, p: &Point<i64>) -> Vec<(Point<i64>, &'a T)> {
+        [
+            Point::new(p.x - 1, p.y),
+            Point::new(p.x + 1, p.y),
+            Point::new(p.x, p.y - 1),
+            Point::new(p.x, p.y + 1),
+        ]
+        .iter()
+        .filter_map(|adj| self.at(adj).map(|t| (*adj, t)))
+        .collect()
     }
 
     pub fn render(&self) -> Result<()> {
@@ -56,6 +72,25 @@ where
 
     pub fn iter(&self) -> impl Iterator<Item = (&Point<i64>, &T)> {
         self.points.iter()
+    }
+
+    pub fn flip_y(&mut self) {
+        let keys: Vec<Point<_>> = self.points.keys().copied().collect();
+        let mut top_left = keys[0];
+        let mut bottom_right = keys[0];
+
+        for p in keys {
+            let v = self.points.remove(&p).unwrap();
+            self.points.insert(Point::new(p.x, 0 - p.y), v);
+
+            top_left.x = top_left.x.min(p.x);
+            top_left.y = top_left.y.max(p.y);
+            bottom_right.x = bottom_right.x.max(p.x);
+            bottom_right.y = bottom_right.y.min(p.y);
+        }
+
+        self.top_left = top_left;
+        self.bottom_right = bottom_right;
     }
 }
 
@@ -85,15 +120,17 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let height = self.top_left.y - self.bottom_right.y;
         let width = self.bottom_right.x - self.top_left.x;
-        for y in 0..=height {
+
+        println!("{} x {}", height, width);
+        for y in (0..=height).rev() {
             for x in 0..=width {
-                let p = &Point::new(self.top_left.x + x, self.top_left.y - y);
+                let p = &Point::new(self.top_left.x + x, y - self.top_left.y);
                 match self.points.get(&p) {
                     Some(v) => write!(f, "{}", v),
                     None => write!(f, " "),
                 }?;
             }
-            if y != height {
+            if y != 0 {
                 writeln!(f)?;
             }
         }

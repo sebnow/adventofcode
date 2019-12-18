@@ -115,7 +115,7 @@ fn get_neighbours(grid: &Grid<Tile>, p: Point) -> Vec<(Point, Tile)> {
         Point::new(p.x, p.y + 1),
     ]
     .iter()
-    .filter_map(|&adjacent| grid.at(adjacent).map(|&t| (adjacent, t)))
+    .filter_map(|&adjacent| grid.at(&adjacent).map(|&t| (adjacent, t)))
     .collect()
 }
 
@@ -202,7 +202,7 @@ fn find_paths(grid: &Grid<Tile>) -> Vec<String> {
 
             let mut steps = 0;
             let mut pos = new_robot.position + turn.absolute.into();
-            while let Some(t) = grid.at(pos) {
+            while let Some(t) = grid.at(&pos) {
                 if !t.is_walkable() {
                     break;
                 }
@@ -262,11 +262,11 @@ fn answer_2(input: &[i64]) -> Result<usize> {
     input[0] = 2;
 
     let mut prg = intcode::Interpretor::new(&input);
-// R,8,L,4,R,4,R,10,R,8,R,8,L,4,R,4,R,10,R,8,L,12,L,12,R,8,R,8,R,10,R,4,R,4,L,12,L,12,R,8,R,8,R,10,R,4,R,4,L,12,L,12,R,8,R,8,R,10,R,4,R,4,R,10,R,4,R,4,R,8,L,4,R,4,R,10,R,8
-//
-// A: R,8,L,4,R,4,R,10,R,8
-// B: L,12,L,12,R,8,R,8
-// C: R,10,R,4,R,4
+    // R,8,L,4,R,4,R,10,R,8,R,8,L,4,R,4,R,10,R,8,L,12,L,12,R,8,R,8,R,10,R,4,R,4,L,12,L,12,R,8,R,8,R,10,R,4,R,4,L,12,L,12,R,8,R,8,R,10,R,4,R,4,R,10,R,4,R,4,R,8,L,4,R,4,R,10,R,8
+    //
+    // A: R,8,L,4,R,4,R,10,R,8
+    // B: L,12,L,12,R,8,R,8
+    // C: R,10,R,4,R,4
     prg.input_str("A,A,B,C,B,C,B,C,C,A\n");
     prg.input_str("R,8,L,4,R,4,R,10,R,8\n");
     prg.input_str("L,12,L,12,R,8,R,8\n");
