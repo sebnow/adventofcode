@@ -55,10 +55,12 @@ impl Nanofactory {
                 .find_reaction_for(&chemical)
                 .ok_or_else(|| anyhow!("missing chemical {}", chemical.name))?
                 .clone();
-            let missing = self.filter_missing_inputs(&reaction);
+            let multiplier =
+                (reaction.output.amount as f64 / chemical.amount as f64).ceil() as usize;
+            let missing = self.filter_missing_inputs(&reaction, multiplier);
 
             if missing.is_empty() {
-                self.react(&reaction)?;
+                self.react(&reaction, multiplier)?;
             } else {
                 // Requeue the original chemical to attempt to produce it again
                 queue.push_front(chemical);
@@ -68,7 +70,7 @@ impl Nanofactory {
             }
         }
 
-        if !self.stockpile.contains_key(&wanted.name) {
+        if *self.stockpile.get(&wanted.name).unwrap_or(&0) < wanted.amount {
             return Err(anyhow!("unable to produce {}", wanted.name));
         }
 
@@ -81,85 +83,36 @@ impl Nanofactory {
             })
     }
 
-    pub fn estimate(&mut self, name: &str) -> Result<usize> {
-        let ore = String::from("ORE");
-        let initial_ore = *self.stockpile.get(&ore).unwrap_or(&0);
-        let chemical = Chemical {
-            name: name.to_owned(),
-            amount: 1,
-        };
-
-        let mut amount = 0;
-        loop {
-            let _ = self.produce(&chemical)?;
-
-            amount += 1;
-
-            // If we only have ORE and `name` left, we have a cycle
-            if self.stockpile.len() == 2 {
-                break;
-            }
-        }
-        let ore_per_cycle = *self
-            .consumed
-            .get(&ore)
-            .ok_or_else(|| anyhow!("no ORE consumed"))?;
-
-        // Skip a few
-        self.clear();
-        let cycles = initial_ore / ore_per_cycle;
-        let amount_per_cycle = amount;
-        amount = cycles * amount_per_cycle;
-        self.stockpile.insert(name.to_owned(), amount);
-        let consumed_ore = self.consumed.entry(ore.clone()).or_insert(0);
-        *consumed_ore = ore_per_cycle * cycles;
-        let piled_ore = self.stockpile.entry(ore.clone()).or_insert(0);
-        *piled_ore = initial_ore - *consumed_ore;
-
-        assert!(*consumed_ore < initial_ore);
-        assert!(ore_per_cycle > *piled_ore);
-        assert!(*piled_ore + *consumed_ore == initial_ore);
-
-        // Produce until we run out of supplies
-        while let Ok(_) = self.produce(&chemical) {
-            amount += 1;
-        }
-
-        Ok(amount)
-    }
-
-    pub fn clear(&mut self) {
-        self.stockpile.clear();
-        self.consumed.clear();
-    }
-
-    fn react(&mut self, reaction: &Reaction) -> Result<()> {
-        if !self.filter_missing_inputs(reaction).is_empty() {
-            return Err(anyhow!("missing inputs"));
-        }
-
+    fn react(&mut self, reaction: &Reaction, multiplier: usize) -> Result<()> {
         for i in &reaction.inputs {
             let entry = self.stockpile.entry(i.name.clone()).or_insert(0);
-            *entry -= i.amount;
+            *entry -= i.amount * multiplier;
 
             if *entry == 0 {
                 self.stockpile.remove(&i.name);
             }
 
             let consumed = self.consumed.entry(i.name.clone()).or_insert(0);
-            *consumed += i.amount;
+            *consumed += i.amount * multiplier;
         }
 
-        self.supply(&reaction.output);
+        self.supply(&Chemical {
+            name: reaction.output.name.clone(),
+            amount: reaction.output.amount * multiplier,
+        });
 
         Ok(())
     }
 
-    fn filter_missing_inputs<'a>(&'a self, reaction: &'a Reaction) -> Vec<&'a Chemical> {
+    fn filter_missing_inputs<'a>(
+        &'a self,
+        reaction: &'a Reaction,
+        multiplier: usize,
+    ) -> Vec<&'a Chemical> {
         reaction
             .inputs
             .iter()
-            .filter(|i| *self.stockpile.get(&i.name).unwrap_or(&0) < i.amount)
+            .filter(|i| *self.stockpile.get(&i.name).unwrap_or(&0) < i.amount * multiplier)
             .collect()
     }
 
@@ -192,7 +145,7 @@ fn answer_1(input: &[Reaction]) -> Result<usize> {
     let mut factory = Nanofactory::new(input.to_owned());
     factory.supply(&Chemical {
         name: "ORE".to_owned(),
-        amount: 999_999_999,
+        amount: std::usize::MAX,
     });
 
     let fuel = Chemical {
@@ -205,13 +158,37 @@ fn answer_1(input: &[Reaction]) -> Result<usize> {
 
 #[aoc(day14, part2)]
 fn answer_2(input: &[Reaction]) -> Result<usize> {
-    let mut factory = Nanofactory::new(input.to_owned());
-    factory.supply(&Chemical {
-        name: "ORE".to_owned(),
-        amount: 1_000_000_000_000,
-    });
+    let target = 82893753;
+    let mut high = target;
+    let mut low = 0;
+    while low < high {
+        println!("checking between {} and {}", low, high);
+        let mid = (low + high) / 2;
+        let mut factory = Nanofactory::new(input.to_owned());
+        factory.supply(&Chemical {
+            name: "ORE".to_owned(),
+            amount: target,
+        });
 
-    factory.estimate("FUEL")
+        let res = factory.produce(&Chemical {
+            name: "FUEL".to_owned(),
+            amount: mid,
+        });
+
+        match res {
+            Ok(Chemical { name: _, amount }) => {
+                println!("{} ORE required for {} fuel", amount, mid);
+                if amount > target {
+                    high = mid - 1;
+                } else if amount < target {
+                    low = mid;
+                }
+            }
+            Err(err) => panic!(err),
+        }
+    }
+
+    Ok(low)
 }
 
 #[cfg(test)]
