@@ -115,7 +115,7 @@ fn get_neighbours(grid: &Grid<Tile>, p: Point) -> Vec<(Point, Tile)> {
         Point::new(p.x, p.y + 1),
     ]
     .iter()
-    .filter_map(|&adjacent| grid.at(adjacent).map(|&t| (adjacent, t)))
+    .filter_map(|&adjacent| grid.at(&adjacent).map(|&t| (adjacent, t)))
     .collect()
 }
 
@@ -202,7 +202,7 @@ fn find_paths(grid: &Grid<Tile>) -> Vec<String> {
 
             let mut steps = 0;
             let mut pos = new_robot.position + turn.absolute.into();
-            while let Some(t) = grid.at(pos) {
+            while let Some(t) = grid.at(&pos) {
                 if !t.is_walkable() {
                     break;
                 }
