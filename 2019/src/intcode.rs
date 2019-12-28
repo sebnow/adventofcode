@@ -119,56 +119,39 @@ impl Interpretor {
 
     fn interpret(&mut self, op: Op) -> Result<InstrResult> {
         match op {
-            Op::Add(a, b, c) => {
-                self.set(c, self.get_value(a) + self.get_value(b))?;
-                Ok(InstrResult::Continue)
-            }
-            Op::Multiply(a, b, c) => {
-                self.set(c, self.get_value(a) * self.get_value(b))?;
-                Ok(InstrResult::Continue)
-            }
+            Op::Add(a, b, c) => self.set(c, self.get_value(a) + self.get_value(b))?,
+            Op::Multiply(a, b, c) => self.set(c, self.get_value(a) * self.get_value(b))?,
+            Op::Less(a, b, c) => self.set(c, (self.get_value(a) < self.get_value(b)) as i64)?,
+            Op::Equal(a, b, c) => self.set(c, (self.get_value(a) == self.get_value(b)) as i64)?,
+            Op::AdjustRelBase(a) => self.rb = (self.rb as i64 + self.get_value(a)) as usize,
             Op::JumpTrue(a, b) => {
                 if self.get_value(a) != 0 {
                     self.ip = self.get_value(b) as usize;
                 }
-                Ok(InstrResult::Continue)
             }
             Op::JumpFalse(a, b) => {
                 if self.get_value(a) == 0 {
                     self.ip = self.get_value(b) as usize;
                 }
-                Ok(InstrResult::Continue)
-            }
-            Op::Less(a, b, c) => {
-                self.set(c, (self.get_value(a) < self.get_value(b)) as i64)?;
-                Ok(InstrResult::Continue)
-            }
-            Op::Equal(a, b, c) => {
-                self.set(c, (self.get_value(a) == self.get_value(b)) as i64)?;
-                Ok(InstrResult::Continue)
             }
             Op::Input(a) => {
                 if let Some(v) = self.inputs.pop_front() {
                     self.set(a, v)?;
-                    Ok(InstrResult::Continue)
                 } else {
                     // Push Input operator back so that it gets processed again when the
                     // interpretor is resumed
                     self.ip = self.ip - 2;
-                    Ok(InstrResult::AwaitInput)
+                    return Ok(InstrResult::AwaitInput);
                 }
             }
             Op::Output(out) => {
                 let v = self.get_value(out);
                 self.output = Some(v);
-                Ok(InstrResult::Suspend(v))
+                return Ok(InstrResult::Suspend(v));
             }
-            Op::AdjustRelBase(a) => {
-                self.rb = (self.rb as i64 + self.get_value(a)) as usize;
-                Ok(InstrResult::Continue)
-            }
-            Op::Terminate => Ok(InstrResult::Terminate),
-        }
+            Op::Terminate => return Ok(InstrResult::Terminate),
+        };
+        Ok(InstrResult::Continue)
     }
 
     fn parse_op(&mut self) -> Result<Op> {
@@ -211,12 +194,17 @@ impl Interpretor {
 
     fn set(&mut self, addr: Param, x: i64) -> Result<()> {
         let dst = match addr {
-            Param::Pointer(x) => Ok(x),
-            Param::Relative(x) => Ok((self.rb as i64 + x) as usize),
-            Param::Immediate(_) => Err(anyhow!("destination can not be an immediate value")),
-        }?;
-        self.memory
-            .resize_with(self.memory.len().max(dst + 1), || 0);
+            Param::Pointer(x) => x,
+            Param::Relative(x) => (self.rb as i64 + x) as usize,
+            Param::Immediate(_) => {
+                return Err(anyhow!("destination can not be an immediate value"))
+            }
+        };
+
+        if self.memory.len() <= dst {
+            self.memory.resize(dst + 1, 0);
+        }
+
         self.memory[dst] = x;
 
         Ok(())
@@ -294,17 +282,18 @@ impl Interpretor {
         Ok(Op::Output(self.parse_param(&mut modes)?))
     }
 
+    #[inline]
     fn parse_param(&mut self, modes: &mut i64) -> Result<Param> {
         let mode = *modes % 10;
         *modes /= 10;
 
-        let p = self.get_token().context("expected param")?;
+        let p = self.get_token()?;
 
-        match mode {
-            MODE_IMMEDIATE => Ok(Param::Immediate(p)),
-            MODE_POSITION => Ok(Param::Pointer(p as usize)),
-            MODE_RELATIVE => Ok(Param::Relative(p)),
-            _ => Err(anyhow!("inavlid mode: {}", mode)),
-        }
+        Ok(match mode {
+            MODE_IMMEDIATE => Param::Immediate(p),
+            MODE_POSITION => Param::Pointer(p as usize),
+            MODE_RELATIVE => Param::Relative(p),
+            _ => return Err(anyhow!("inavlid mode: {}", mode)),
+        })
     }
 }
