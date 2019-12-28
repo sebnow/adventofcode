@@ -77,23 +77,20 @@ impl std::fmt::Display for Param {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Interpretor {
     ip: usize,
     rb: usize,
     memory: Vec<i64>,
     inputs: VecDeque<i64>,
-    outputs: Vec<i64>,
+    output: Option<i64>,
 }
 
 impl Interpretor {
     pub fn new(memory: &[i64]) -> Self {
         Interpretor {
-            ip: 0,
-            rb: 0,
             memory: memory.to_owned(),
-            outputs: Vec::new(),
-            inputs: VecDeque::new(),
+            ..Self::default()
         }
     }
 
@@ -103,9 +100,7 @@ impl Interpretor {
             let result = self.interpret(op)?;
             match result {
                 InstrResult::Suspend(x) => return Ok(State::Suspended(x)),
-                InstrResult::Terminate => {
-                    return Ok(State::Terminated(self.outputs.iter().last().copied()))
-                }
+                InstrResult::Terminate => return Ok(State::Terminated(self.output)),
                 InstrResult::AwaitInput => return Ok(State::AwaitingInput),
                 InstrResult::Continue => continue,
             }
@@ -145,44 +140,27 @@ impl Interpretor {
                 Ok(InstrResult::Continue)
             }
             Op::Less(a, b, c) => {
-                self.set(
-                    c,
-                    if self.get_value(a) < self.get_value(b) {
-                        1
-                    } else {
-                        0
-                    },
-                )?;
+                self.set(c, (self.get_value(a) < self.get_value(b)) as i64)?;
                 Ok(InstrResult::Continue)
             }
             Op::Equal(a, b, c) => {
-                self.set(
-                    c,
-                    if self.get_value(a) == self.get_value(b) {
-                        1
-                    } else {
-                        0
-                    },
-                )?;
+                self.set(c, (self.get_value(a) == self.get_value(b)) as i64)?;
                 Ok(InstrResult::Continue)
             }
             Op::Input(a) => {
-                match self.inputs.pop_front() {
-                    Some(v) => {
-                        self.set(a, v)?;
-                        Ok(InstrResult::Continue)
-                    }
-                    None => {
-                        // Push Input operator back so that it gets processed again when the
-                        // interpretor is resumed
-                        self.ip = self.ip - 2;
-                        Ok(InstrResult::AwaitInput)
-                    }
+                if let Some(v) = self.inputs.pop_front() {
+                    self.set(a, v)?;
+                    Ok(InstrResult::Continue)
+                } else {
+                    // Push Input operator back so that it gets processed again when the
+                    // interpretor is resumed
+                    self.ip = self.ip - 2;
+                    Ok(InstrResult::AwaitInput)
                 }
             }
             Op::Output(out) => {
                 let v = self.get_value(out);
-                self.outputs.push(v);
+                self.output = Some(v);
                 Ok(InstrResult::Suspend(v))
             }
             Op::AdjustRelBase(a) => {
@@ -215,13 +193,12 @@ impl Interpretor {
     }
 
     fn get_token(&mut self) -> Result<i64> {
-        if self.ip >= self.memory.len() {
-            Err(anyhow!("expected token"))
-        } else {
-            let v = self.memory[self.ip];
-            self.ip += 1;
-            Ok(v)
-        }
+        let v = self
+            .memory
+            .get(self.ip)
+            .ok_or_else(|| anyhow!("expected token"))?;
+        self.ip += 1;
+        Ok(*v)
     }
 
     fn get_value(&self, param: Param) -> i64 {
@@ -246,11 +223,7 @@ impl Interpretor {
     }
 
     pub fn get(&self, addr: usize) -> i64 {
-        if addr >= self.memory.len() {
-            0
-        } else {
-            self.memory[addr]
-        }
+        *self.memory.get(addr).unwrap_or(&0)
     }
 
     pub fn input(&mut self, v: i64) {
@@ -265,12 +238,9 @@ impl Interpretor {
 
     fn parse_instr_addi(&mut self, mut modes: &mut i64) -> Result<Op> {
         Ok(Op::Add(
-            self.parse_param(&mut modes)
-                .context("first operand to add operation")?,
-            self.parse_param(&mut modes)
-                .context("second operand to add operation")?,
-            self.parse_param(&mut modes)
-                .context("third operand to add operation")?,
+            self.parse_param(&mut modes)?,
+            self.parse_param(&mut modes)?,
+            self.parse_param(&mut modes)?,
         ))
     }
 
