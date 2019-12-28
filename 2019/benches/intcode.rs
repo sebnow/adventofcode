@@ -3,7 +3,8 @@
 //
 // Which uses benchmark intcode programs from:
 // https://www.reddit.com/r/adventofcode/comments/egq9xn/2019_day_9_intcode_benchmarking_suite
-use adventofcode2019::intcode::{Interpretor, State};
+use adventofcode2019::intcode::Interpretor;
+use anyhow::Result;
 use criterion::{criterion_group, criterion_main, Criterion};
 
 // reddit thread: https://redd.it/egq9xn
@@ -60,20 +61,13 @@ static PRIME_FACTOR: [i64; 383] = [
     383, 320, 377, 22001, -1, 1, 1, 1105, 1, 315,
 ];
 
-fn run_test(program: &[i64], input: &[i64]) -> Vec<i64> {
+fn run_test(program: &[i64], input: &[i64]) -> Result<Option<i64>> {
     let mut cpu = Interpretor::new(program);
     for &i in input {
         cpu.input(i);
     }
-    let mut output = Vec::new();
-    loop {
-        match cpu.run().unwrap() {
-            State::Suspended(o) => output.push(o),
-            State::Terminated(_) => break,
-            State::AwaitingInput => unreachable!(),
-        }
-    }
-    output
+
+    cpu.run_complete()
 }
 
 macro_rules! test {
