@@ -1,5 +1,6 @@
 use euclid;
 use std::collections::HashMap;
+use std::iter;
 
 pub trait Collision {
     fn is_collidable(&self) -> bool;
@@ -51,6 +52,13 @@ where
             .filter(|(_, &x)| x == *v)
             .map(|(p, _)| p)
             .collect()
+    }
+
+    pub fn filter<P>(&self, f: P) -> impl iter::Iterator<Item = (&Point, &T)>
+    where
+        P: FnMut(&(&Point, &T)) -> bool,
+    {
+        self.coords.iter().filter(f)
     }
 }
 

@@ -2,7 +2,7 @@ use crate::grid::{Collision, Grid, Point};
 use anyhow::{anyhow, Result};
 use std::collections::VecDeque;
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Tile {
     Wall,
     Space,
@@ -80,11 +80,38 @@ pub fn input_generator(input: &str) -> Grid<Tile> {
     Grid::from_vec2d(tiles)
 }
 
+#[derive(Debug)]
 struct Path {
-    prev: Option<Point>,
+    prev: Point,
     pos: Point,
     grid: Grid<Tile>,
-    keys_left: Vec<char>,
+    amount_of_keys_left: usize,
+    keys: u32,
+    steps: usize,
+}
+
+impl Path {
+    fn add_key(&mut self, key: char) {
+        self.keys = self.keys | 2 << key as u8 - b'a'
+    }
+    fn has_key_for_door(&self, door: char) -> bool {
+        self.has_key(door.to_ascii_lowercase())
+    }
+
+    fn has_key(&self, key: char) -> bool {
+        self.keys & 2 << key as u8 - b'a' != 0
+    }
+
+    fn get_keys(&self) -> Vec<char> {
+        ('a'..='z').filter(|&k| self.has_key(k)).collect()
+    }
+}
+
+fn is_key(t: &Tile) -> bool {
+    match t {
+        Tile::Key(_) => true,
+        _ => false,
+    }
 }
 
 #[aoc(day18, part1)]
@@ -92,46 +119,114 @@ fn answer_1(input: &Grid<Tile>) -> Result<usize> {
     println!("{}", input);
     let mut paths = VecDeque::new();
 
-    let entrances = input.find(&Tile::Entrance);
-    assert_eq!(1, entrances.len());
-    let entrance = entrances[0];
-    let keys = input.search(
+    let mut grid = input.clone();
+    let mut complete_paths = Vec::new();
+    {
+        let entrances = input.find(&Tile::Entrance);
+        assert_eq!(1, entrances.len());
+        let entrance = entrances[0];
+        let amount_of_keys = input.filter(|&(_, t)| is_key(t)).count();
+        assert_ne!(0, amount_of_keys);
 
-    paths.push_back(Path {
-        prev: None,
-        pos: *entrance,
-        grid: input.clone(),
-        keys_left:
-    });
+        grid.insert(*entrance, Tile::Space);
+        paths.push_back(Path {
+            prev: *entrance,
+            pos: *entrance,
+            grid: grid,
+            amount_of_keys_left: amount_of_keys,
+            keys: 0,
+            steps: 0,
+        });
+    }
 
-    while let Some(mut path) = paths.pop_front() {
-        let is_key = path
+    let mut iterations = 0;
+    while let Some(mut path) = paths.pop_back() {
+        if iterations > 20000 {
+            break;
+        }
+
+        println!("");
+        println!("=========== {} ==========", iterations);
+        // TODO: REMOVE
+        {
+            let mut g = path.grid.clone();
+            g.insert(path.pos, Tile::Entrance);
+
+            println!("{}", g);
+        }
+        println!("prev: {:?}", path.prev);
+        println!("pos: {:?}", path.pos);
+        println!("steps: {:?}", path.steps);
+        println!("keys: {:?}", path.get_keys());
+        println!("keys left: {:?}", path.amount_of_keys_left);
+        let mut amount_of_keys_left = path.amount_of_keys_left;
+        let mut new_grid = path.grid.clone();
+        let current_tile = path
             .grid
             .get(&path.pos)
-            .map(|&t| match t {
-                Tile::Key(_) => true,
-                _ => false,
-            })
-            .expect("strayed off the beaten path");
+            .ok_or_else(|| anyhow!("strayed off the beaten path"))?;
 
-        if is_key {
-            path.grid.insert(path.pos, Tile::Space);
+        if let &Tile::Door(d) = current_tile {
+            if path.has_key_for_door(d) {
+                new_grid.insert(path.pos, Tile::Space);
+            }
+        } else if let &Tile::Key(k) = current_tile {
+            if !path.has_key(k) {
+                println!("picked up {}", k);
+                path.add_key(k);
+                amount_of_keys_left -= 1;
+
+                // Try going back to check if a previously blocked passage has opened
+                paths.push_back(Path {
+                    prev: path.pos,
+                    pos: path.prev,
+                    grid: new_grid.clone(),
+                    amount_of_keys_left,
+                    keys: path.keys,
+                    steps: path.steps + 1,
+                });
+
+                if amount_of_keys_left == 0 {
+                    complete_paths.push(path);
+                    continue;
+                }
+            }
         }
 
         let possible = path.grid.filter_surrounding(path.pos, |&p, v| {
-            !v.is_collidable() && path.prev.map(|x| p != x).unwrap_or(true)
+            // filter_surround returns positions on the diagonal as well. We want a crosshair
+            // pattern only.
+            if !(path.pos.x == p.x || path.pos.y == p.y) {
+                return false;
+            }
+
+            if let &Tile::Door(d) = v {
+                return path.has_key_for_door(d);
+            }
+
+            !v.is_collidable() && path.prev != p
         });
+        println!("possible: {:?}", possible);
 
         for p in possible {
             paths.push_back(Path {
-                prev: Some(path.pos),
+                prev: path.pos,
                 pos: p,
-                grid: path.grid.clone(),
+                grid: new_grid.clone(),
+                amount_of_keys_left,
+                keys: path.keys,
+                steps: path.steps + 1,
             })
         }
+
+        iterations += 1;
     }
 
-    Ok(0)
+    complete_paths
+        .iter()
+        .min_by_key(|p| p.steps)
+        .map(|p| p.steps)
+        .ok_or_else(|| anyhow!("no paths found"))
 }
 
 #[aoc(day18, part2)]
