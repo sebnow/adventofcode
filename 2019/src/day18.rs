@@ -1,7 +1,8 @@
-use crate::grid::Grid;
+use crate::grid::{Collision, Grid, Point};
 use anyhow::{anyhow, Result};
+use std::collections::VecDeque;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum Tile {
     Wall,
     Space,
@@ -55,6 +56,20 @@ impl std::fmt::Display for Tile {
     }
 }
 
+impl Collision for Tile {
+    fn is_collidable(&self) -> bool {
+        use Tile::*;
+
+        match self {
+            Wall => true,
+            Door(_) => true,
+            Key(_) => false,
+            Space => false,
+            Entrance => false,
+        }
+    }
+}
+
 #[aoc_generator(day18)]
 pub fn input_generator(input: &str) -> Grid<Tile> {
     let tiles: Vec<Vec<Tile>> = input
@@ -65,11 +80,57 @@ pub fn input_generator(input: &str) -> Grid<Tile> {
     Grid::from_vec2d(tiles)
 }
 
+struct Path {
+    prev: Option<Point>,
+    pos: Point,
+    grid: Grid<Tile>,
+    keys_left: Vec<char>,
+}
+
 #[aoc(day18, part1)]
 fn answer_1(input: &Grid<Tile>) -> Result<usize> {
     println!("{}", input);
-    // DFS
-    // Path finding
+    let mut paths = VecDeque::new();
+
+    let entrances = input.find(&Tile::Entrance);
+    assert_eq!(1, entrances.len());
+    let entrance = entrances[0];
+    let keys = input.search(
+
+    paths.push_back(Path {
+        prev: None,
+        pos: *entrance,
+        grid: input.clone(),
+        keys_left:
+    });
+
+    while let Some(mut path) = paths.pop_front() {
+        let is_key = path
+            .grid
+            .get(&path.pos)
+            .map(|&t| match t {
+                Tile::Key(_) => true,
+                _ => false,
+            })
+            .expect("strayed off the beaten path");
+
+        if is_key {
+            path.grid.insert(path.pos, Tile::Space);
+        }
+
+        let possible = path.grid.filter_surrounding(path.pos, |&p, v| {
+            !v.is_collidable() && path.prev.map(|x| p != x).unwrap_or(true)
+        });
+
+        for p in possible {
+            paths.push_back(Path {
+                prev: Some(path.pos),
+                pos: p,
+                grid: path.grid.clone(),
+            })
+        }
+    }
+
     Ok(0)
 }
 
