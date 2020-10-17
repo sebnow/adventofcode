@@ -8,6 +8,9 @@ pub trait Collision {
 
 pub type Point = euclid::Point2D<i64, euclid::UnknownUnit>;
 
+pub const MASK_CROSSHAIR: u8 = 0b01011010;
+pub const MASK_ALL: u8 = 0b11111111;
+
 #[derive(Default, Debug, PartialEq, Clone)]
 pub struct Grid<T> {
     coords: HashMap<Point, T>,
@@ -46,55 +49,42 @@ where
         self.coords.get(p)
     }
 
-    pub fn find<'a>(&'a self, v: &'a T) -> Vec<&'a Point> {
-        self.coords
-            .iter()
-            .filter(|(_, &x)| x == *v)
-            .map(|(p, _)| p)
-            .collect()
+    pub fn iter(&self) -> impl iter::Iterator<Item = (&Point, &T)> {
+        self.coords.iter()
     }
 
-    pub fn filter<P>(&self, f: P) -> impl iter::Iterator<Item = (&Point, &T)>
-    where
-        P: FnMut(&(&Point, &T)) -> bool,
-    {
-        self.coords.iter().filter(f)
-    }
-}
-
-impl<T> Grid<T>
-where
-    T: Collision + Copy + PartialEq,
-{
-    pub fn shortest_path(&self, a: Point, b: Point) -> Option<Vec<Point>> {
-        None
-    }
-
-    pub fn filter_surrounding<F>(&self, p: Point, f: F) -> Vec<Point>
-    where
-        F: Fn(&Point, &T) -> bool,
-    {
-        let ps = [
-            Point::new(p.x - 1, p.y - 1),
-            Point::new(p.x, p.y - 1),
-            Point::new(p.x + 1, p.y - 1),
-            Point::new(p.x - 1, p.y),
-            Point::new(p.x + 1, p.y),
+    /// Return cells surrounding `p` according to `mask`. The `mask` bit positions map to cells in
+    /// row-major order starting with the most significant bit, omitting the middle point `p`.
+    ///
+    /// +---+---+---+
+    /// | 7 | 6 | 5 |
+    /// +---+---+---+
+    /// | 4 | _ | 3 |
+    /// +---+---+---+
+    /// | 2 | 1 | 0 |
+    /// +---+---+---+
+    pub fn surrounding(&self, p: &Point, mask: u8) -> Vec<(Point, &T)> {
+        [
             Point::new(p.x - 1, p.y + 1),
             Point::new(p.x, p.y + 1),
             Point::new(p.x + 1, p.y + 1),
-        ];
-
-        ps.iter()
-            .filter_map(|p| {
-                let v = self.get(p)?;
-                if f(p, v) {
-                    Some(*p)
-                } else {
-                    None
-                }
-            })
-            .collect()
+            Point::new(p.x - 1, p.y),
+            Point::new(p.x + 1, p.y),
+            Point::new(p.x - 1, p.y - 1),
+            Point::new(p.x, p.y - 1),
+            Point::new(p.x + 1, p.y - 1),
+        ]
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, s)| {
+            let cell = 1 << (7 - idx);
+            if mask & cell == cell {
+                self.coords.get(s).map(|v| (s.clone(), v))
+            } else {
+                None
+            }
+        })
+        .collect()
     }
 }
 
@@ -174,31 +164,50 @@ d e"#,
     }
 
     #[test]
-    fn filter_surrounding() {
-        let mut g = Grid::default();
-        g.insert(Point::new(0, 0), Collidable('a', true));
-        g.insert(Point::new(1, 0), Collidable(' ', false));
-        g.insert(Point::new(2, 0), Collidable('b', true));
-        g.insert(Point::new(0, -1), Collidable(' ', false));
-        g.insert(Point::new(1, -1), Collidable('c', true));
-        g.insert(Point::new(2, -1), Collidable(' ', false));
-        g.insert(Point::new(0, -2), Collidable('d', true));
-        g.insert(Point::new(1, -2), Collidable(' ', false));
-        g.insert(Point::new(2, -2), Collidable('e', true));
+    fn surrounding() {
+        let g = Grid::from_vec2d(vec![
+            vec!['a', 'b', 'c'],
+            vec!['d', 'e', 'f'],
+            vec!['g', 'h', 'i'],
+        ]);
 
         assert_eq!(
-            vec![Point::new(1, -1), Point::new(0, 0), Point::new(2, 0)],
-            g.filter_surrounding(Point::new(1, 0), |_, &v| v.is_collidable())
+            vec![
+                (Point::new(1, 0), &'b'),
+                (Point::new(0, -1), &'d'),
+                (Point::new(2, -1), &'f'),
+                (Point::new(1, -2), &'h')
+            ],
+            g.surrounding(&Point::new(1, -1), MASK_CROSSHAIR)
         );
 
         assert_eq!(
-            vec![Point::new(0, -2)],
-            g.filter_surrounding(Point::new(0, -3), |_, &v| v.is_collidable())
+            vec![
+                (Point::new(0, 0), &'a'),
+                (Point::new(2, 0), &'c'),
+                (Point::new(0, -2), &'g'),
+                (Point::new(2, -2), &'i'),
+            ],
+            g.surrounding(&Point::new(1, -1), !MASK_CROSSHAIR)
         );
 
         assert_eq!(
-            vec![Point::new(2, -2), Point::new(2, 0)],
-            g.filter_surrounding(Point::new(3, -1), |_, &v| v.is_collidable())
+            vec![
+                (Point::new(0, 0), &'a'),
+                (Point::new(1, 0), &'b'),
+                (Point::new(2, 0), &'c'),
+                (Point::new(0, -1), &'d'),
+                (Point::new(2, -1), &'f'),
+                (Point::new(0, -2), &'g'),
+                (Point::new(1, -2), &'h'),
+                (Point::new(2, -2), &'i')
+            ],
+            g.surrounding(&Point::new(1, -1), MASK_ALL)
+        );
+
+        assert_eq!(
+            Vec::<(Point, &char)>::new(),
+            g.surrounding(&Point::new(1, -1), !MASK_ALL)
         );
     }
 }
