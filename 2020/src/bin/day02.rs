@@ -90,7 +90,7 @@ fn part_two(input: &[PasswordEntry]) -> Result<String> {
             let fst = pass[entry.policy.min - 1];
             let snd = pass[entry.policy.max - 1];
 
-            (fst == ch || snd == ch) && fst != snd
+            (fst == ch) ^ (snd == ch)
         })
         .count();
 
