@@ -1,4 +1,4 @@
-use crate::grid::{Collision, Grid, Point};
+use crate::grid::{Collision, Grid, Point, MASK_CROSSHAIR};
 use anyhow::{anyhow, Result};
 use std::collections::VecDeque;
 
@@ -81,19 +81,30 @@ pub fn input_generator(input: &str) -> Grid<Tile> {
 }
 
 #[derive(Debug)]
-struct Path {
+struct Candidate<'a> {
     prev: Point,
-    pos: Point,
-    grid: Grid<Tile>,
-    amount_of_keys_left: usize,
+    position: Point,
+    keys_to_collect: Vec<(&'a Point, char)>,
     keys: u32,
     steps: usize,
+
+    // For debugging
+    // TODO: Remove
+    history: Vec<char>,
 }
 
-impl Path {
-    fn add_key(&mut self, key: char) {
-        self.keys = self.keys | 2 << key as u8 - b'a'
+impl<'a> Candidate<'a> {
+    fn add_key(&mut self, key: char) -> Result<()> {
+        self.keys = self.keys | 2 << key as u8 - b'a';
+        let idx = self
+            .keys_to_collect
+            .binary_search_by_key(&key, |&(_, k)| k)
+            .map_err(|err| anyhow!("key already collected ({})", err))?;
+        self.keys_to_collect.remove(idx);
+        self.history.push(key);
+        Ok(())
     }
+
     fn has_key_for_door(&self, door: char) -> bool {
         self.has_key(door.to_ascii_lowercase())
     }
@@ -101,131 +112,147 @@ impl Path {
     fn has_key(&self, key: char) -> bool {
         self.keys & 2 << key as u8 - b'a' != 0
     }
-
-    fn get_keys(&self) -> Vec<char> {
-        ('a'..='z').filter(|&k| self.has_key(k)).collect()
-    }
-}
-
-fn is_key(t: &Tile) -> bool {
-    match t {
-        Tile::Key(_) => true,
-        _ => false,
-    }
 }
 
 #[aoc(day18, part1)]
-fn answer_1(input: &Grid<Tile>) -> Result<usize> {
-    println!("{}", input);
-    let mut paths = VecDeque::new();
+fn answer_1(grid: &Grid<Tile>) -> Result<usize> {
+    let mut candidates = VecDeque::new();
 
-    let mut grid = input.clone();
-    let mut complete_paths = Vec::new();
+    let mut complete_candidates: Vec<Candidate> = Vec::new();
     {
-        let entrances = input.find(&Tile::Entrance);
-        assert_eq!(1, entrances.len());
-        let entrance = entrances[0];
-        let amount_of_keys = input.filter(|&(_, t)| is_key(t)).count();
-        assert_ne!(0, amount_of_keys);
+        let entrance = grid
+            .iter()
+            .find_map(|(&p, &t)| match t {
+                Tile::Entrance => Some(p),
+                _ => None,
+            })
+            .ok_or_else(|| anyhow!("entrance not found"))?;
+        let mut keys: Vec<_> = grid
+            .iter()
+            .filter_map(|(p, &t)| match t {
+                Tile::Key(k) => Some((p, k)),
+                _ => None,
+            })
+            .collect();
+        keys.sort_by_key(|&(_, k)| k);
+        assert_ne!(0, keys.len());
 
-        grid.insert(*entrance, Tile::Space);
-        paths.push_back(Path {
-            prev: *entrance,
-            pos: *entrance,
-            grid: grid,
-            amount_of_keys_left: amount_of_keys,
+        candidates.push_back(Candidate {
+            prev: entrance,
+            position: entrance,
+            keys_to_collect: keys,
             keys: 0,
             steps: 0,
+            history: vec![],
         });
     }
 
+    let expected = vec![
+        'a', 'f', 'b', 'j', 'g', 'n', 'h', 'd', 'l', 'o', 'e', 'p', 'c', 'i', 'k', 'm',
+    ];
     let mut iterations = 0;
-    while let Some(mut path) = paths.pop_back() {
-        if iterations > 20000 {
-            break;
-        }
+    while let Some(mut candidate) = candidates.pop_back() {
+        // Infinite loop failsafe
+        // TODO: Remove
+        //        if iterations > 30 {
+        //            break;
+        //        }
+        //if candidate.steps > 140 {
+        //    continue;
+        //}
 
-        println!("");
-        println!("=========== {} ==========", iterations);
+        //let want: Vec<char> = expected
+        //    .iter()
+        //    .take(candidate.history.len())
+        //    .map(|x| *x)
+        //    .collect();
+        //if candidate.history != want {
+        //    continue;
+        //}
+
         // TODO: REMOVE
         {
-            let mut g = path.grid.clone();
-            g.insert(path.pos, Tile::Entrance);
-
+            println!("");
+            println!("=========== {} ==========", iterations);
+            println!("Prev: {:?}", candidate.prev);
+            println!("Pos: {:?}", candidate.position);
+            println!("Path: {:?}", candidate.history);
+            println!("Left: {:?}", candidate.keys_to_collect);
+            println!("Steps: {}", candidate.steps);
+            let mut g = grid.clone();
+            g.insert(candidate.position, Tile::Entrance);
             println!("{}", g);
         }
-        println!("prev: {:?}", path.prev);
-        println!("pos: {:?}", path.pos);
-        println!("steps: {:?}", path.steps);
-        println!("keys: {:?}", path.get_keys());
-        println!("keys left: {:?}", path.amount_of_keys_left);
-        let mut amount_of_keys_left = path.amount_of_keys_left;
-        let mut new_grid = path.grid.clone();
-        let current_tile = path
-            .grid
-            .get(&path.pos)
-            .ok_or_else(|| anyhow!("strayed off the beaten path"))?;
 
-        if let &Tile::Door(d) = current_tile {
-            if path.has_key_for_door(d) {
-                new_grid.insert(path.pos, Tile::Space);
-            }
-        } else if let &Tile::Key(k) = current_tile {
-            if !path.has_key(k) {
-                println!("picked up {}", k);
-                path.add_key(k);
-                amount_of_keys_left -= 1;
+        let tile = grid
+            .get(&candidate.position)
+            .ok_or_else(|| anyhow!("off the beaten path"))?;
 
-                // Try going back to check if a previously blocked passage has opened
-                paths.push_back(Path {
-                    prev: path.pos,
-                    pos: path.prev,
-                    grid: new_grid.clone(),
-                    amount_of_keys_left,
-                    keys: path.keys,
-                    steps: path.steps + 1,
-                });
-
-                if amount_of_keys_left == 0 {
-                    complete_paths.push(path);
+        if let Tile::Key(k) = tile {
+            if !candidate.has_key(*k) {
+                println!("Picking up {}", k);
+                candidate.add_key(*k)?;
+                if candidate.keys_to_collect.len() == 0 {
+                    complete_candidates.push(candidate);
                     continue;
                 }
+
+                // Backtrack in case a new path opened up.
+                println!("Backtracking candidate {:?}", candidate.prev);
+                candidates.push_back(Candidate {
+                    prev: candidate.position,
+                    position: candidate.prev,
+                    keys_to_collect: candidate.keys_to_collect.clone(),
+                    history: candidate.history.clone(),
+                    steps: candidate.steps + 1,
+                    ..candidate
+                });
+            } else {
+                println!("Skipping {}", k);
             }
         }
 
-        let possible = path.grid.filter_surrounding(path.pos, |&p, v| {
-            // filter_surround returns positions on the diagonal as well. We want a crosshair
-            // pattern only.
-            if !(path.pos.x == p.x || path.pos.y == p.y) {
-                return false;
-            }
-
-            if let &Tile::Door(d) = v {
-                return path.has_key_for_door(d);
-            }
-
-            !v.is_collidable() && path.prev != p
-        });
-        println!("possible: {:?}", possible);
-
-        for p in possible {
-            paths.push_back(Path {
-                prev: path.pos,
-                pos: p,
-                grid: new_grid.clone(),
-                amount_of_keys_left,
-                keys: path.keys,
-                steps: path.steps + 1,
+        grid.surrounding(&candidate.position, MASK_CROSSHAIR)
+            .iter()
+            .filter(|(sp, &st)| {
+                if *sp == candidate.prev {
+                    return false;
+                }
+                match st {
+                    Tile::Door(d) => candidate.has_key_for_door(d),
+                    Tile::Wall => false,
+                    _ => true,
+                }
             })
-        }
+            .for_each(|&(sp, _)| {
+                let c = Candidate {
+                    prev: candidate.position,
+                    position: sp,
+                    keys_to_collect: candidate.keys_to_collect.clone(),
+                    history: candidate.history.clone(),
+                    steps: candidate.steps + 1,
+                    ..candidate
+                };
+                let dir = candidate.position - candidate.prev;
+                println!("Adding candidate {:?}", sp);
+                if candidate.position + dir == sp {
+                    candidates.push_back(c);
+                } else {
+                    candidates.push_front(c);
+                }
+            });
 
         iterations += 1;
     }
 
-    complete_paths
+    complete_candidates
         .iter()
-        .min_by_key(|p| p.steps)
-        .map(|p| p.steps)
+        .min_by_key(|c| c.steps)
+        .map(|c| {
+            println!("winner: {:?}", c);
+            //c.steps
+            0
+        })
         .ok_or_else(|| anyhow!("no paths found"))
 }
 

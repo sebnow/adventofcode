@@ -16,7 +16,8 @@ permutohedron = "^0.2.4"
 regex = "^1.3.1"
 aocutil = {path = "../aocutil"}
 termion = "^1.5.0"
-euclid = "0.21.0"
+euclid = "^0.22.1"
+pathfinding = "^2.0.4"
 
 [dev-dependencies]
 criterion = "0.3"
