@@ -94,7 +94,126 @@ impl Interpretor {
         }
     }
 
+    #[inline]
+    fn param(&self, modes: i64, arg: usize) -> i64 {
+        let value = self.fetch(self.ip + 1 + arg);
+        let mode = (modes / 10_i64.pow(arg as u32)) % 10;
+        match mode {
+            MODE_IMMEDIATE => value,
+            MODE_POSITION => self.fetch(value as usize),
+            MODE_RELATIVE => self.fetch((value + self.rb as i64) as usize),
+            _ => unreachable!("invalid mode"),
+        }
+    }
+
+    #[inline]
+    fn addr(&self, modes: i64, arg: usize) -> i64 {
+        let value = self.fetch(self.ip + 1 + arg);
+        let mode = (modes / 10_i64.pow(arg as u32)) % 10;
+        match mode {
+            MODE_IMMEDIATE => panic!("can't resolve immediate address"),
+            MODE_POSITION => value,
+            MODE_RELATIVE => value + self.rb as i64,
+            _ => unreachable!("invalid mode"),
+        }
+    }
+
+    #[inline]
+    fn fetch(&self, addr: usize) -> i64 {
+        self.memory.get(addr).copied().unwrap_or(0)
+    }
+
+    #[inline]
+    fn op_arity(op: i64) -> usize {
+        match op {
+            OP_ADDI => 3,
+            OP_MULT => 3,
+            OP_INPU => 1,
+            OP_OUTP => 1,
+            OP_JMPT => 2,
+            OP_JMPF => 2,
+            OP_LESS => 3,
+            OP_EQUA => 3,
+            OP_ADRB => 1,
+            OP_TERM => 0,
+            _ => unreachable!("invalid opcode"),
+        }
+    }
+
+    fn set2(&mut self, addr: i64, value: i64) {
+        let addr = addr as usize;
+        if self.memory.len() <= addr {
+            self.memory.resize(addr + 1, 0);
+        }
+
+        self.memory[addr] = value;
+    }
+
     pub fn run(&mut self) -> Result<State> {
+        if false {
+            return self._run();
+        }
+
+        loop {
+            let instr = self.fetch(self.ip);
+            let op = instr % 100;
+            let modes = instr / 100;
+
+            match op {
+                OP_ADDI => self.set2(
+                    self.addr(modes, 2),
+                    self.param(modes, 0) + self.param(modes, 1),
+                ),
+                OP_MULT => self.set2(
+                    self.addr(modes, 2),
+                    self.param(modes, 0) * self.param(modes, 1),
+                ),
+                OP_LESS => self.set2(
+                    self.addr(modes, 2),
+                    (self.param(modes, 0) < self.param(modes, 1)) as i64,
+                ),
+                OP_EQUA => self.set2(
+                    self.addr(modes, 2),
+                    (self.param(modes, 0) == self.param(modes, 1)) as i64,
+                ),
+                OP_JMPT => {
+                    if self.param(modes, 0) != 0 {
+                        self.ip = self.param(modes, 1) as usize;
+                        continue;
+                    }
+                }
+                OP_JMPF => {
+                    if self.param(modes, 0) == 0 {
+                        self.ip = self.param(modes, 1) as usize;
+                        continue;
+                    }
+                }
+                OP_ADRB => self.rb = (self.rb as i64 + self.param(modes, 0)) as usize,
+                OP_INPU => {
+                    if let Some(v) = self.inputs.pop_front() {
+                        self.set2(self.addr(modes, 0), v);
+                    } else {
+                        self.ip += 1 + Self::op_arity(op);
+                        return Ok(State::AwaitingInput);
+                    }
+                }
+                OP_OUTP => {
+                    let v = self.param(modes, 0);
+                    self.output = Some(v);
+                    self.ip += 1 + Self::op_arity(op);
+                    return Ok(State::Suspended(v));
+                }
+                OP_TERM => {
+                    self.ip += 1 + Self::op_arity(op);
+                    return Ok(State::Terminated(self.output));
+                }
+                _ => unreachable!("invalid opcode"),
+            };
+            self.ip += 1 + Self::op_arity(op);
+        }
+    }
+
+    pub fn _run(&mut self) -> Result<State> {
         loop {
             let op = self.parse_op()?;
             let result = self.interpret(op)?;
@@ -296,4 +415,25 @@ impl Interpretor {
             _ => return Err(anyhow!("inavlid mode: {}", mode)),
         })
     }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    macro_rules! test {
+        ($name:ident, $left:expr, $prg:expr) => {
+            #[test]
+            fn $name() {
+                let mut prg = Interpretor::new($prg);
+                assert_eq!(Some($left), prg.run_complete().unwrap());
+            }
+        };
+    }
+
+    test!(add, 15, &[01101, 10, 5, 7, 4, 7, 99, 0]);
+    test!(add_overflow, 15, &[01101, 10, 5, 7, 4, 7, 99, 0]);
+    test!(output_immediate, 10, &[104, 10, 99]);
+    test!(output_position, 20, &[004, 3, 99, 20]);
+    test!(output_relative, 20, &[109, 5, 204, 0, 99, 20]);
 }
