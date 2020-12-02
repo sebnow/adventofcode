@@ -63,8 +63,9 @@ fn parse_input(s: &str) -> Result<Vec<PasswordEntry>> {
     s.lines().map(|l| l.parse()).collect()
 }
 
-fn part_one(input: &[PasswordEntry]) -> Result<String> {
-    let valid_count = input
+fn part_one(input: &str) -> String {
+    parse_input(input)
+        .unwrap()
         .iter()
         .filter(|entry| {
             let count = entry
@@ -75,13 +76,13 @@ fn part_one(input: &[PasswordEntry]) -> Result<String> {
 
             entry.policy.min <= count && count <= entry.policy.max
         })
-        .count();
-
-    Ok(format!("{}", valid_count))
+        .count()
+        .to_string()
 }
 
-fn part_two(input: &[PasswordEntry]) -> Result<String> {
-    let valid_count = input
+fn part_two(input: &str) -> String {
+    parse_input(input)
+        .unwrap()
         .iter()
         .filter(|entry| {
             let pass = entry.password.chars().collect::<Vec<_>>();
@@ -92,15 +93,14 @@ fn part_two(input: &[PasswordEntry]) -> Result<String> {
 
             (fst == ch) ^ (snd == ch)
         })
-        .count();
-
-    Ok(format!("{}", valid_count))
+        .count()
+        .to_string()
 }
 
 fn main() -> Result<()> {
-    let input = parse_input(include_str!("../../input/day02.txt"))?;
-    println!("Part one: {}", part_one(&input)?);
-    println!("Part two: {}", part_two(&input)?);
+    let input = include_str!("../../input/day02.txt");
+    println!("Part one: {}", part_one(&input));
+    println!("Part two: {}", part_two(&input));
 
     Ok(())
 }
@@ -108,6 +108,7 @@ fn main() -> Result<()> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use aocutil::test_example;
 
     #[test]
     fn parse() {
@@ -124,19 +125,6 @@ mod test {
         );
     }
 
-    #[test]
-    fn examples_1() {
-        assert_eq!(
-            "2",
-            part_one(&parse_input(include_str!("../../example/day02-01-01.txt")).unwrap()).unwrap()
-        );
-    }
-
-    #[test]
-    fn examples_2() {
-        assert_eq!(
-            "1",
-            part_two(&parse_input(include_str!("../../example/day02-02-01.txt")).unwrap()).unwrap()
-        );
-    }
+    test_example!(example_one_1, part_one, 2, 1, 1);
+    test_example!(example_two_1, part_two, 2, 2, 1);
 }

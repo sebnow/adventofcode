@@ -2,11 +2,13 @@ mod direction;
 mod grid;
 mod iter;
 mod point;
+mod test;
 
 pub use direction::*;
 pub use grid::*;
 pub use iter::*;
 pub use point::*;
+pub use test::*;
 
 #[cfg(test)]
 mod tests {
