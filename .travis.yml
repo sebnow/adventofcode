@@ -5,6 +5,8 @@ cache: cargo
 
 install:
   - (cd 2019; cargo build --verbose)
+  - (cd 2020; cargo build --verbose)
 
 script:
-  - (cd 2019; cargo build --verbose; cargo test --verbose)
+  - (cd 2019; cargo test --verbose)
+  - (cd 2020; cargo test --verbose)
