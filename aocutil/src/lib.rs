@@ -1,5 +1,5 @@
 mod direction;
-mod grid;
+pub mod grid;
 mod iter;
 mod point;
 mod test;
