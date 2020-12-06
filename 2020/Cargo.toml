@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 anyhow = ""
 aocutil = {path = "../aocutil"}
+itertools = "0.9.0"
