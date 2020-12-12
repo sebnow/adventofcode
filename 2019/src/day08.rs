@@ -4,7 +4,7 @@ const HEIGHT: usize = 6;
 const WIDTH: usize = 25;
 
 type Grid = aocutil::Grid<Color>;
-type Point = aocutil::Point<i64>;
+type Point = aocutil::Point;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Color {
@@ -63,7 +63,7 @@ pub fn decode(input: &[Color], width: usize, height: usize) -> Result<Grid> {
                     }
                 })
                 .unwrap_or(Color::Transparent);
-            g.add(Point::new(x as i64, (height - 1 - y) as i64), p);
+            g.insert(Point::new(x as i64, (height - 1 - y) as i64), p);
         }
     }
 
@@ -107,10 +107,10 @@ mod test {
     #[test]
     fn examples_2() {
         let mut g = Grid::default();
-        g.add(Point::new(0, 0), Color::White);
-        g.add(Point::new(1, 0), Color::Black);
-        g.add(Point::new(0, 1), Color::Black);
-        g.add(Point::new(1, 1), Color::White);
+        g.insert(Point::new(0, 0), Color::White);
+        g.insert(Point::new(1, 0), Color::Black);
+        g.insert(Point::new(0, 1), Color::Black);
+        g.insert(Point::new(1, 1), Color::White);
 
         assert_eq!(
             g,

@@ -1,10 +1,9 @@
 use crate::intcode;
 use anyhow::{anyhow, Result};
-use aocutil;
-use std::collections::HashMap;
+use aocutil::{Point, Vector};
 use std::convert::TryFrom;
 
-type Point = aocutil::Point<i64>;
+type Grid = aocutil::Grid<Tile>;
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum Tile {
@@ -13,6 +12,12 @@ pub enum Tile {
     Block,
     HorizontalPaddle,
     Ball,
+}
+
+impl Default for Tile {
+    fn default() -> Self {
+        Tile::Empty
+    }
 }
 
 impl std::fmt::Display for Tile {
@@ -54,7 +59,7 @@ pub struct Game {
     paddle: Point,
     ball: Point,
     prg: intcode::Interpretor,
-    grid: HashMap<Point, Tile>,
+    grid: Grid,
 }
 
 enum Input {
@@ -80,7 +85,7 @@ impl Game {
             over: false,
             score: 0,
             prg: intcode::Interpretor::new(rom),
-            grid: HashMap::new(),
+            grid: Grid::new(),
             paddle: Point::default(),
             ball: Point::default(),
         }
@@ -119,7 +124,7 @@ impl Game {
                 }
                 .into();
 
-                self.paddle = self.paddle + Point::new(input, 0);
+                self.paddle = self.paddle + Vector::new(input, 0);
                 self.prg.input(input);
             }
         }
@@ -139,7 +144,7 @@ impl Game {
         self.score
     }
 
-    pub fn get_tiles<'a>(&'a self) -> &'a HashMap<Point, Tile> {
+    pub fn get_grid<'a>(&'a self) -> &'a Grid {
         &self.grid
     }
 

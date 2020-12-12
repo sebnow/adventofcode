@@ -1,14 +1,14 @@
 use crate::intcode;
 use anyhow::{anyhow, Result};
 use aocutil::Direction;
-use aocutil::Grid;
+use aocutil::{Grid, Point};
 use std::collections::VecDeque;
 
 const SCAFFOLD: Tile = Tile(b'#' as i64);
 const OPEN_SPACE: Tile = Tile(b'.' as i64);
 const NL: i64 = b'\n' as i64;
 
-type Point = aocutil::Point<i64>;
+type Vector2D = euclid::Vector2D<i64, euclid::UnknownUnit>;
 
 #[derive(PartialEq, Clone, Copy, Debug)]
 struct Tile(i64);
@@ -100,7 +100,7 @@ fn build_grid(input: &[i64]) -> Result<Grid<Tile>> {
     let mut grid = Grid::new();
     for (y, r) in map.iter().enumerate() {
         for (x, &t) in r.iter().enumerate() {
-            grid.add(Point::new(x as i64, (height - y) as i64), t);
+            grid.insert(Point::new(x as i64, (height - y) as i64), t);
         }
     }
 
@@ -115,7 +115,7 @@ fn get_neighbours(grid: &Grid<Tile>, p: Point) -> Vec<(Point, Tile)> {
         Point::new(p.x, p.y + 1),
     ]
     .iter()
-    .filter_map(|&adjacent| grid.at(adjacent).map(|&t| (adjacent, t)))
+    .filter_map(|&adjacent| grid.get(&adjacent).map(|&t| (adjacent, t)))
     .collect()
 }
 
@@ -145,7 +145,7 @@ impl Robot {
 }
 
 fn find_robots(grid: &Grid<Tile>) -> Vec<Robot> {
-    for (&p, &t) in grid.points.iter() {
+    for (&p, &t) in grid.iter() {
         let robots = match t.as_char() {
             '^' => vec![Robot::new(p, Direction::Up)],
             '>' => vec![Robot::new(p, Direction::Right)],
@@ -177,14 +177,15 @@ fn find_paths(grid: &Grid<Tile>) -> Vec<String> {
         }
 
         if tiles.len() == 1 {
-            let back = match robot.direction {
+            let back: Vector2D = match robot.direction {
                 Direction::Up => Direction::Down,
                 Direction::Right => Direction::Left,
                 Direction::Down => Direction::Up,
                 Direction::Left => Direction::Left,
-            };
+            }
+            .into();
             // Can't go back so this path is complete
-            if robot.position + back.into() == tiles[0].0 {
+            if robot.position + back == tiles[0].0 {
                 paths.push(robot.path.join(","));
                 continue;
             }
@@ -201,18 +202,19 @@ fn find_paths(grid: &Grid<Tile>) -> Vec<String> {
             let turn = turn.unwrap();
 
             let mut steps = 0;
-            let mut pos = new_robot.position + turn.absolute.into();
-            while let Some(t) = grid.at(pos) {
+            let vec: Vector2D = turn.absolute.into();
+            let mut pos = new_robot.position + vec;
+            while let Some(t) = grid.get(&pos) {
                 if !t.is_walkable() {
                     break;
                 }
 
-                pos = pos + turn.absolute.into();
+                pos = pos + vec;
                 steps += 1;
             }
 
             assert!(steps > 0, "appending path when no steps were taken");
-            new_robot.position = pos - turn.absolute.into();
+            new_robot.position = pos - vec;
             new_robot.direction = turn.absolute;
             new_robot.path.push(format!("{},{}", turn.relative, steps));
             robots.push_back(new_robot);
@@ -236,7 +238,7 @@ fn answer_1(input: &[i64]) -> Result<usize> {
     let grid = build_grid(input)?;
 
     let mut parameters = 0;
-    for (&p, &tile) in grid.points.iter() {
+    for (&p, &tile) in grid.iter() {
         if tile == OPEN_SPACE {
             continue;
         }
@@ -262,11 +264,11 @@ fn answer_2(input: &[i64]) -> Result<usize> {
     input[0] = 2;
 
     let mut prg = intcode::Interpretor::new(&input);
-// R,8,L,4,R,4,R,10,R,8,R,8,L,4,R,4,R,10,R,8,L,12,L,12,R,8,R,8,R,10,R,4,R,4,L,12,L,12,R,8,R,8,R,10,R,4,R,4,L,12,L,12,R,8,R,8,R,10,R,4,R,4,R,10,R,4,R,4,R,8,L,4,R,4,R,10,R,8
-//
-// A: R,8,L,4,R,4,R,10,R,8
-// B: L,12,L,12,R,8,R,8
-// C: R,10,R,4,R,4
+    // R,8,L,4,R,4,R,10,R,8,R,8,L,4,R,4,R,10,R,8,L,12,L,12,R,8,R,8,R,10,R,4,R,4,L,12,L,12,R,8,R,8,R,10,R,4,R,4,L,12,L,12,R,8,R,8,R,10,R,4,R,4,R,10,R,4,R,4,R,8,L,4,R,4,R,10,R,8
+    //
+    // A: R,8,L,4,R,4,R,10,R,8
+    // B: L,12,L,12,R,8,R,8
+    // C: R,10,R,4,R,4
     prg.input_str("A,A,B,C,B,C,B,C,C,A\n");
     prg.input_str("R,8,L,4,R,4,R,10,R,8\n");
     prg.input_str("L,12,L,12,R,8,R,8\n");

@@ -2,9 +2,11 @@ use crate::intcode;
 use anyhow::{anyhow, Result};
 use std::collections::{HashMap, VecDeque};
 use std::convert::{Into, TryFrom};
+use aocutil::Point;
+use euclid;
 
-type Point = aocutil::Point<i64>;
 type Map = HashMap<Point, Tile>;
+type Vector2D = euclid::Vector2D<i64, euclid::UnknownUnit>;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 enum Tile {
@@ -48,13 +50,13 @@ impl Into<i64> for Movement {
     }
 }
 
-impl Into<Point> for Movement {
-    fn into(self) -> Point {
+impl Into<Vector2D> for Movement {
+    fn into(self) -> Vector2D {
         match self {
-            Movement::North => Point::new(0, 1),
-            Movement::East => Point::new(1, 0),
-            Movement::South => Point::new(0, -1),
-            Movement::West => Point::new(-1, 0),
+            Movement::North => Vector2D::new(0, 1),
+            Movement::East => Vector2D::new(1, 0),
+            Movement::South => Vector2D::new(0, -1),
+            Movement::West => Vector2D::new(-1, 0),
         }
     }
 }
@@ -115,7 +117,8 @@ fn build_map(prg: &intcode::Interpretor) -> Result<(Map, Option<Robot>)> {
 
     while let Some(robot) = robots.pop_front() {
         for &m in &directions {
-            let new_pos = robot.pos + m.into();
+            let vec: Vector2D = m.into();
+            let new_pos = robot.pos + vec;
             if map.contains_key(&new_pos) {
                 // visited already
                 continue;
@@ -171,7 +174,8 @@ fn fill(map: &Map, origin: &Point) -> Result<usize> {
         map.insert(p, Tile::Oxygen);
 
         for &m in &directions {
-            let new_pos = p + m.into();
+            let vec: Vector2D = m.into();
+            let new_pos = p + vec;
             match map.get(&new_pos) {
                 Some(Tile::Wall) => continue,
                 Some(Tile::Oxygen) => continue,
@@ -202,7 +206,7 @@ pub fn input_generator(input: &str) -> Vec<i64> {
 #[aoc(day15, part1)]
 fn answer_1(input: &[i64]) -> Result<usize> {
     let prg = intcode::Interpretor::new(input);
-    let (map, robot) = build_map(&prg)?;
+    let (_, robot) = build_map(&prg)?;
 
     Ok(robot.unwrap().steps)
 }
