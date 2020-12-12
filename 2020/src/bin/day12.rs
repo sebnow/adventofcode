@@ -128,7 +128,6 @@ fn part_one(input: &str) -> String {
         },
     );
 
-    println!("{:?}, {:?}", ship.loc, ship.dir);
     (ship.loc.x.abs() + ship.loc.y.abs()).to_string()
 }
 
@@ -141,7 +140,6 @@ fn part_two(input: &str) -> String {
         },
         |Ship { loc, dir, wp }, instr| {
             use Instr::*;
-            println!("{:?}: {:?}, {:?} @ {:?}", instr, loc, dir, wp);
             match *instr {
                 N(v) => Ship {
                     wp: Point::new(wp.x, wp.y + v),

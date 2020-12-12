@@ -10,3 +10,7 @@ edition = "2018"
 anyhow = ""
 aocutil = {path = "../aocutil"}
 itertools = "0.9.0"
+
+[dependencies.bevy]
+git = "https://github.com/bevyengine/bevy.git"
+rev = "9239621ffc9c653b27ce857448d82bbf770f8933" # newer than 0.3
