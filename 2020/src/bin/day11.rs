@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use aocutil::grid::{Point, MASK_ALL};
+use aocutil::{Point, MASK_ALL};
 use std::convert::{TryFrom, TryInto};
 
 #[derive(PartialEq, Debug, Clone, Copy)]

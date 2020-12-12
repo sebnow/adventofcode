@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+
 fn parse_input(s: &str) -> Result<Vec<i64>> {
     s.lines()
         .map(|l| l.parse().map_err(|err| anyhow!("{}", err)))
@@ -62,13 +63,4 @@ fn main() -> Result<()> {
     println!("Part two: {}", part_two(&input));
 
     Ok(())
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use aocutil::test_example;
-
-    //    test_example!(example_one_1, part_one, 3, 1, 1);
-    //    test_example!(example_two_1, part_two, 3, 2, 1);
 }

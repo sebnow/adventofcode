@@ -1,7 +1,6 @@
 use crate::intcode;
 use anyhow::{anyhow, Result};
-
-type Point = aocutil::Point<i64>;
+use aocutil::Point;
 
 fn is_in_beam(input: &[i64], p: &Point) -> Result<bool> {
     let mut prg = intcode::Interpretor::new(input);

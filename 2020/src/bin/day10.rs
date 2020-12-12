@@ -1,5 +1,4 @@
 use anyhow::{anyhow, Result};
-use std::cmp;
 
 fn parse_input(s: &str) -> Result<Vec<i64>> {
     s.lines()

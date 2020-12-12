@@ -1,6 +1,6 @@
 use crate::intcode::{Interpretor, State};
 use anyhow::{anyhow, Result};
-use aocutil::{self, Direction};
+use aocutil::{Point, Direction, Vector};
 use std::collections::HashMap;
 
 const BLACK: i64 = 0;
@@ -8,8 +8,6 @@ const WHITE: i64 = 1;
 
 const LEFT: i64 = 0;
 const RIGHT: i64 = 1;
-
-type Point = aocutil::Point<i64>;
 
 struct Robot {
     brain: Interpretor,
@@ -64,7 +62,8 @@ fn paint_hull(input: &[i64], starting_color: i64) -> Result<HashMap<Point, i64>>
             State::AwaitingInput => return Err(anyhow!("expected input")),
         }
 
-        rbt.position = pos + rbt.direction.into();
+        let vec: Vector = rbt.direction.into();
+        rbt.position = pos + vec;
     }
 
     Ok(panels)
@@ -90,7 +89,7 @@ fn answer_2(input: &[i64]) -> Result<String> {
 
     let mut g = aocutil::Grid::new();
     for (p, c) in hull {
-        g.add(
+        g.insert(
             p,
             match c {
                 BLACK => '░',

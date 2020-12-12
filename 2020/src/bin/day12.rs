@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use aocutil::grid::Point;
+use aocutil::Point;
 
 #[derive(Debug)]
 enum Instr {

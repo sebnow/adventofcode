@@ -3,7 +3,7 @@ pub struct DigitIterator {
 }
 
 impl DigitIterator {
-    fn new(x: i64) -> Self {
+    pub fn new(x: i64) -> Self {
         DigitIterator { x }
     }
 }

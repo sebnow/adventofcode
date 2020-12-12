@@ -1,15 +1,15 @@
-use aocutil::{self, EuclideanDistance};
+use euclid;
 
-type Point = aocutil::Point<f64>;
+type Point = euclid::Point2D<f64, euclid::UnknownUnit>;
 
 fn is_in_line_of_sight(asteroids: &[Point], a: &Point, b: &Point) -> bool {
     asteroids
         .iter()
         .filter(|&x| x != a && x != b)
-        .find(|x| {
-            let len_ab = a.euclidean_distance(b);
-            let len_ax = a.euclidean_distance(x);
-            let len_bx = b.euclidean_distance(x);
+        .find(|&x| {
+            let len_ab = a.distance_to(*b);
+            let len_ax = a.distance_to(*x);
+            let len_bx = b.distance_to(*x);
 
             (len_ax + len_bx) - len_ab <= 0.000_1
         })

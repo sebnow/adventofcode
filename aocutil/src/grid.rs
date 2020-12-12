@@ -7,6 +7,7 @@ pub trait Collision {
 }
 
 pub type Point = euclid::Point2D<i64, euclid::UnknownUnit>;
+pub type Vector = euclid::Vector2D<i64, euclid::UnknownUnit>;
 
 pub const MASK_CROSSHAIR: u8 = 0b01011010;
 pub const MASK_ALL: u8 = 0b11111111;
@@ -16,6 +17,16 @@ pub struct Grid<T> {
     coords: HashMap<Point, T>,
     x_bounds: (i64, i64),
     y_bounds: (i64, i64),
+}
+
+impl<T> Grid<T> {
+    pub fn new() -> Self {
+        Grid {
+            coords: HashMap::default(),
+            x_bounds: (0, 0),
+            y_bounds: (0, 0),
+        }
+    }
 }
 
 impl<T> Grid<T>
@@ -43,6 +54,10 @@ where
         self.coords.insert(p, v);
         self.x_bounds = (self.x_bounds.0.min(p.x), self.x_bounds.1.max(p.x));
         self.y_bounds = (self.y_bounds.0.min(p.y), self.y_bounds.1.max(p.y));
+    }
+
+    pub fn remove(&mut self, p: &Point) -> Option<T> {
+        self.coords.remove(p)
     }
 
     pub fn get(&self, p: &Point) -> Option<&T> {

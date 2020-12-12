@@ -2,7 +2,6 @@ use anyhow::Result;
 use std::time::Duration;
 
 use adventofcode2019::arkanoid;
-use aocutil::Grid;
 
 fn get_rom(path: &str) -> Result<Vec<i64>> {
     let buffer = std::fs::read_to_string(path)?;
@@ -27,8 +26,8 @@ fn main() -> Result<()> {
     while !game.is_over() {
         game.update()?;
 
-        let g = Grid::from(game.get_tiles());
-        g.render()?;
+        let g = game.get_grid();
+        println!("{}", g);
 
         std::thread::sleep(Duration::from_millis(50));
     }
