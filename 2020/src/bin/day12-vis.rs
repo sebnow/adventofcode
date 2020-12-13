@@ -1,8 +1,8 @@
 use anyhow::{anyhow, Result};
 use bevy::prelude::*;
 
-const CELL_SIZE: f32 = 24.;
-const FERRY_SPEED: f32 = 10.0 * CELL_SIZE;
+const CELL_SIZE: f32 = 0.3;
+const FERRY_SPEED: f32 = 200.0 * CELL_SIZE;
 const WAYPOINT_SPEED: f32 = FERRY_SPEED;
 
 #[derive(Debug, Clone, Copy)]
@@ -214,32 +214,20 @@ fn interpretor(
                 Instr::E(v) => wp_dest.x += v * CELL_SIZE,
                 Instr::W(v) => wp_dest.x -= v * CELL_SIZE,
                 Instr::L(v) => {
-                    *wp_dest = (0..(v / 90.0).ceil() as usize)
+                    let new_relative = (0..(v / 90.0).ceil() as i64)
                         .fold(relative, |r, _| Vec3::new(r.y * -1.0, r.x, r.z));
+                    *wp_dest = ferry_transform.translation + new_relative;
                 }
                 Instr::R(v) => {
-                    *wp_dest = (0..(v / 90.0).ceil() as usize)
+                    let new_relative = (0..(v / 90.0).ceil() as i64)
                         .fold(relative, |r, _| Vec3::new(r.y, r.x - 1., r.z));
+                    *wp_dest = ferry_transform.translation + new_relative;
                 }
                 Instr::F(v) => {
-                    //*ferry_dest += relative * v * CELL_SIZE;
-                    //*wp_dest += relative * v * CELL_SIZE;
+                    *ferry_dest += relative * v * CELL_SIZE;
+                    *wp_dest += relative * v * CELL_SIZE;
                 }
             }
-
-            println!("Waypoint {:?} -> {:?}", wp_transform.translation, wp_dest);
-            println!(
-                "---> Waypoint is {} away from target",
-                wp_transform.translation.distance(*wp_dest)
-            );
-            println!(
-                "Ferry {:?} -> {:?}",
-                ferry_transform.translation, ferry_dest
-            );
-            println!(
-                "---> Ferry is {} away from target",
-                ferry_transform.translation.distance(*ferry_dest)
-            );
         }
     }
 
