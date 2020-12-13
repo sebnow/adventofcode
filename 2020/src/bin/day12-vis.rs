@@ -5,7 +5,7 @@ const CELL_SIZE: f32 = 24.;
 const FERRY_SPEED: f32 = 10.0 * CELL_SIZE;
 const WAYPOINT_SPEED: f32 = FERRY_SPEED;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 enum Instr {
     N(f32),
     S(f32),
@@ -34,8 +34,26 @@ impl std::str::FromStr for Instr {
     }
 }
 
+impl std::fmt::Display for Instr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Instr::N(v) => format!("N{}", v),
+                Instr::S(v) => format!("S{}", v),
+                Instr::E(v) => format!("E{}", v),
+                Instr::W(v) => format!("W{}", v),
+                Instr::L(v) => format!("L{}", v),
+                Instr::R(v) => format!("R{}", v),
+                Instr::F(v) => format!("F{}", v),
+            }
+        )
+    }
+}
 struct GameState {
-    instr: Vec<Instr>,
+    instruction: Instr,
+    instructions: Vec<Instr>,
     idx: usize,
     timer: Timer,
 }
@@ -45,6 +63,51 @@ struct Waypoint;
 struct Day12Vis;
 struct TargetDestination(Vec3);
 struct Movable(f32);
+struct InstructionText;
+
+struct UIPlugin;
+
+impl Plugin for UIPlugin {
+    fn build(&self, app: &mut AppBuilder) {
+        app.add_startup_system(init_instruction_text.system())
+            .add_system(update_instruction_text);
+    }
+}
+
+fn init_instruction_text(commands: &mut Commands, asset_server: ResMut<AssetServer>) {
+    let font = asset_server.load("fonts/FiraSans-Regular.ttf");
+
+    commands
+        .spawn(CameraUiBundle::default())
+        .spawn(TextBundle {
+            style: Style {
+                position_type: PositionType::Absolute,
+                position: Rect {
+                    left: Val::Px(CELL_SIZE),
+                    top: Val::Px(CELL_SIZE),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            text: Text {
+                value: "Instruction: ".to_string(),
+                font,
+                style: TextStyle {
+                    font_size: 40.0,
+                    color: Color::rgb(0.8, 0.8, 0.8),
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        })
+        .with(InstructionText);
+}
+
+fn update_instruction_text(gs: Res<GameState>, mut query: Query<(&mut Text, &InstructionText)>) {
+    for (mut text, _) in query.iter_mut() {
+        text.value = format!("Instruction: {}", gs.instruction);
+    }
+}
 
 impl Plugin for Day12Vis {
     fn build(&self, app: &mut AppBuilder) {
@@ -63,7 +126,8 @@ impl Plugin for Day12Vis {
             ..Default::default()
         })
         .add_resource(GameState {
-            instr,
+            instruction: instr[0],
+            instructions: instr,
             idx: 0,
             timer,
         })
@@ -143,8 +207,8 @@ fn interpretor(
 
             let relative = wp_transform.translation - ferry_transform.translation;
 
-            println!("Processing instruction #{}: {:?}", gs.idx, gs.instr[gs.idx]);
-            match gs.instr[gs.idx] {
+            gs.instruction = gs.instructions[gs.idx];
+            match gs.instruction {
                 Instr::N(v) => wp_dest.y += v * CELL_SIZE,
                 Instr::S(v) => wp_dest.y -= v * CELL_SIZE,
                 Instr::E(v) => wp_dest.x += v * CELL_SIZE,
@@ -231,5 +295,6 @@ fn main() {
     App::build()
         .add_plugins(DefaultPlugins)
         .add_plugin(Day12Vis)
+        .add_plugin(UIPlugin)
         .run();
 }
