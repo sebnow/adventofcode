@@ -53,21 +53,28 @@ fn part_one(input: &str) -> String {
 }
 
 fn part_two(input: &str) -> String {
-    let buses: Vec<(i64, i64)> = parse_input(input).unwrap().1.iter().enumerate().filter_map(|(i, bus)| {
-        match bus {
+    let mut buses: Vec<_> = parse_input(input)
+        .unwrap()
+        .1
+        .iter()
+        .enumerate()
+        .filter_map(|(dt, bus)| match bus {
             Bus::OutOfService => None,
-            Bus::ID(x) => Some((i as i64, *x)),
-        }
-    }).collect();
+            Bus::ID(id) => Some((dt as i64, *id)),
+        })
+        .collect();
 
-    let mut time = buses[0].1;
-    loop {
-        if buses.iter().all(|(offset, bus)| (time + offset) % bus == 0) {
-            return time.to_string()
-        }
-
-        time += 1;
-    }
+    let step = buses.remove(0).1;
+    buses
+        .iter()
+        .fold((0, step), |(t, step), (dt, id)| {
+            (
+                (t..std::i64::MAX).step_by(step as usize).find(|t| (t + dt) % id == 0).unwrap(),
+                step * id,
+            )
+        })
+        .0
+        .to_string()
 }
 
 fn main() -> Result<()> {
