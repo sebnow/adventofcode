@@ -69,7 +69,10 @@ fn part_two(input: &str) -> String {
         .iter()
         .fold((0, step), |(t, step), (dt, id)| {
             (
-                (t..std::i64::MAX).step_by(step as usize).find(|t| (t + dt) % id == 0).unwrap(),
+                (t..std::i64::MAX)
+                    .step_by(step as usize)
+                    .find(|t| (t + dt) % id == 0)
+                    .unwrap(),
                 step * id,
             )
         })
