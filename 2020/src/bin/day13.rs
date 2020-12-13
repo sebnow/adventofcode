@@ -16,25 +16,25 @@ impl std::str::FromStr for Bus {
     }
 }
 
-fn parse_input(s: &str) -> Result<(i64, Vec<Bus>)> {
+fn parse_input<'a>(s: &'a str) -> (i64, impl Iterator<Item = Bus> + 'a) {
     let mut lines = s.lines();
     let est = lines
         .next()
-        .ok_or_else(|| anyhow!("missing estimate"))?
-        .parse()?;
+        .expect("missing estimate")
+        .parse().unwrap();
     let buses = lines
         .next()
-        .ok_or_else(|| anyhow!("missing busses"))?
+        .expect("missing busses")
         .split(",")
-        .map(|x| x.parse())
-        .collect::<Result<Vec<Bus>>>()?;
+        .map(|x| x.parse().unwrap());
 
-    Ok((est, buses))
+    (est, buses)
 }
 
 fn part_one(input: &str) -> String {
-    let (estimate, buses) = parse_input(input).unwrap();
+    let (estimate, buses) = parse_input(input);
     let mut time = estimate;
+    let buses: Vec<Bus> = buses.collect();
 
     loop {
         for bus in &buses {
@@ -53,21 +53,14 @@ fn part_one(input: &str) -> String {
 }
 
 fn part_two(input: &str) -> String {
-    let mut buses: Vec<_> = parse_input(input)
-        .unwrap()
+    parse_input(input)
         .1
-        .iter()
         .enumerate()
         .filter_map(|(dt, bus)| match bus {
             Bus::OutOfService => None,
-            Bus::ID(id) => Some((dt as i64, *id)),
+            Bus::ID(id) => Some((dt as i64, id)),
         })
-        .collect();
-
-    let step = buses.remove(0).1;
-    buses
-        .iter()
-        .fold((0, step), |(t, step), (dt, id)| {
+        .fold((0, 1), |(t, step), (dt, id)| {
             (
                 (t..std::i64::MAX)
                     .step_by(step as usize)
