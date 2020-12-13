@@ -53,7 +53,21 @@ fn part_one(input: &str) -> String {
 }
 
 fn part_two(input: &str) -> String {
-    "".to_string()
+    let buses: Vec<(i64, i64)> = parse_input(input).unwrap().1.iter().enumerate().filter_map(|(i, bus)| {
+        match bus {
+            Bus::OutOfService => None,
+            Bus::ID(x) => Some((i as i64, *x)),
+        }
+    }).collect();
+
+    let mut time = buses[0].1;
+    loop {
+        if buses.iter().all(|(offset, bus)| (time + offset) % bus == 0) {
+            return time.to_string()
+        }
+
+        time += 1;
+    }
 }
 
 fn main() -> Result<()> {
@@ -70,4 +84,10 @@ mod test {
     use aocutil::test_example;
 
     test_example!(example_one_1, part_one, 13, 1, 1);
+    test_example!(example_two_1, part_two, 13, 2, 1);
+    test_example!(example_two_2, part_two, 13, 2, 2);
+    test_example!(example_two_3, part_two, 13, 2, 3);
+    test_example!(example_two_4, part_two, 13, 2, 4);
+    test_example!(example_two_5, part_two, 13, 2, 5);
+    test_example!(example_two_6, part_two, 13, 2, 6);
 }
