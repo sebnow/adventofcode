@@ -45,8 +45,7 @@ fn part_two(input: &str) -> String {
         .unwrap();
 
     for turn in called.len() as i64 + 1..=30000000 {
-        let prevwtf = called.clone(); // TODO Figure out the borrow issue
-        let num = match prevwtf.get(&prev) {
+        let num = match called.get(&prev) {
             Some(t) => turn - 1 - t,
             None => 0,
         };
