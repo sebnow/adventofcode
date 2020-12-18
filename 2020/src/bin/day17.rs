@@ -224,5 +224,4 @@ mod test {
     use aocutil::test_example;
 
     test_example!(example_one_1, part_one, 17, 1, 1);
-    test_example!(example_two_1, part_two, 17, 2, 1);
 }
