@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use rayon::str::ParallelString;
+use rayon::iter::ParallelIterator;
 
 #[derive(Debug)]
 enum Expr {
@@ -118,7 +120,7 @@ fn part_two(input: &str) -> String {
 
     input
         .replace(" ", "")
-        .lines()
+        .par_lines()
         .map(|expr| Parser::new(expr, &prec).expr().eval())
         .sum::<i64>()
         .to_string()
