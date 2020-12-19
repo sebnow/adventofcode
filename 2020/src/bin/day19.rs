@@ -1,5 +1,7 @@
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
+use rayon::str::ParallelString;
+use rayon::iter::ParallelIterator;
 
 #[derive(Clone, PartialEq, Debug)]
 enum Rule {
@@ -101,7 +103,7 @@ impl std::str::FromStr for RuleEngine {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let rules = s
-            .lines()
+            .par_lines()
             .map(|l| {
                 let mut parts = l.split(": ");
                 Ok((
@@ -118,11 +120,11 @@ impl std::str::FromStr for RuleEngine {
     }
 }
 
-fn parse_input<'a>(input: &'a str) -> (RuleEngine, impl Iterator<Item = &'a str> + 'a) {
+fn parse_input<'a>(input: &'a str) -> (RuleEngine, impl ParallelIterator<Item = &'a str> + 'a) {
     let mut parts = input.split("\n\n");
     (
         parts.next().unwrap().parse().unwrap(),
-        parts.next().unwrap().lines(),
+        parts.next().unwrap().par_lines(),
     )
 }
 
