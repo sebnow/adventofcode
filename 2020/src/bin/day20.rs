@@ -1,10 +1,43 @@
 use aocutil::{Grid, Point};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
-#[derive(Clone, Debug)]
+type Vector = euclid::Vector2D<i64, euclid::UnknownUnit>;
+
+#[derive(Clone, Debug, PartialEq)]
 struct Image {
     id: i64,
     grid: Grid<char>,
+}
+
+impl Image {
+    fn bordering(&self, other: &Self) -> Option<(Vector, Self)> {
+        todo!()
+    }
+}
+
+fn stitch(images: &[Image]) -> Grid<char> {
+    let mut queue: VecDeque<&Image> = images.iter().collect();
+    let mut stitched: Grid<&Image> = {
+        let first = queue.pop_front().unwrap();
+        let mut g = Grid::new();
+        g.insert(Point::zero(), first);
+        g
+    };
+
+    'queue: while let Some(img) = queue.pop_front() {
+        let old = stitched.clone();
+        for (&p, c) in old.iter() {
+            if let Some((dp, transformed)) = c.bordering(&img) {
+                stitched.insert(p + dp, &transformed);
+                continue 'queue;
+            }
+        }
+        queue.push_back(img);
+    }
+
+    // let complete = Grid::new();
+    // //.. Copy images, discarding borders
+    Grid::new()
 }
 
 fn parse_input<'a>(input: &'a str) -> Vec<Image> {
@@ -81,7 +114,9 @@ fn part_one(input: &str) -> String {
         .to_string()
 }
 
-fn part_two(_input: &str) -> String {
+fn part_two(input: &str) -> String {
+    let g = stitch(&parse_input(input));
+
     "".to_string()
 }
 
