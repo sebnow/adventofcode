@@ -1,5 +1,6 @@
 use euclid;
 use std::collections::HashMap;
+use std::convert::From;
 use std::iter;
 
 pub trait Collision {
@@ -76,6 +77,13 @@ where
         (self.x_bounds.1 - self.x_bounds.0) as usize
     }
 
+    pub fn bounds(&self) -> (Point, Point) {
+        (
+            Point::new(self.x_bounds.0, self.y_bounds.0),
+            Point::new(self.x_bounds.1, self.y_bounds.1),
+        )
+    }
+
     /// Return cells surrounding `p` according to `mask`. The `mask` bit positions map to cells in
     /// row-major order starting with the most significant bit, omitting the middle point `p`.
     ///
@@ -102,7 +110,7 @@ where
         .filter_map(|(idx, s)| {
             let cell = 1 << (7 - idx);
             if mask & cell == cell {
-                self.coords.get(s).map(|v| (s.clone(), v))
+                self.coords.get(s).map(|v| (s.to_owned(), v))
             } else {
                 None
             }
@@ -130,6 +138,32 @@ where
             }
         }
         Ok(())
+    }
+}
+
+impl<T> std::iter::FromIterator<(Point, T)> for Grid<T>
+where
+    T: Copy + PartialEq,
+{
+    fn from_iter<IT: IntoIterator<Item = (Point, T)>>(iter: IT) -> Self {
+        iter.into_iter().fold(Grid::new(), |mut g, (p, c)| {
+            g.insert(p, c);
+            g
+        })
+    }
+}
+
+impl From<&str> for Grid<char> {
+    fn from(value: &str) -> Self {
+        let mut grid = Grid::new();
+
+        for (dy, l) in value.lines().enumerate() {
+            for (x, c) in l.chars().enumerate() {
+                grid.insert(Point::new(x as i64, 0 - dy as i64), c);
+            }
+        }
+
+        grid
     }
 }
 
