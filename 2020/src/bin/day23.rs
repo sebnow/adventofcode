@@ -1,20 +1,3 @@
-const DEBUG: bool = false;
-
-fn format_cups(cups: &[usize], head: usize) -> String {
-    let mut v = Vec::new();
-    let mut cur = cups[0];
-    for _ in 0..cups.len() - 1 {
-        v.push(if cur == head {
-            format!("({})", cur)
-        } else {
-            format!("{}", cur)
-        });
-        cur = cups[cur];
-    }
-
-    v.join(" ")
-}
-
 fn find_dest(cups: &[usize], cur: usize, ignore: &[usize]) -> usize {
     let mut d = cur;
     loop {
@@ -34,50 +17,27 @@ fn play_game(input: &str, moves: usize, pad: usize) -> Vec<usize> {
     // represented in contiguous memory.
     let (mut cups, mut c): (Vec<usize>, usize) = {
         let mut v = vec![0; pad + 1];
-        let cups: Vec<usize> = parse_input(input).chain(10..=pad).collect();
+        let mut cups: Vec<usize> = parse_input(input).chain(10..=pad).collect();
+        cups.push(cups[0]);
         for (&cur, &next) in cups.iter().zip(cups.iter().skip(1)) {
             v[cur] = next;
         }
-        v[0] = 1; // TODO
-        v[pad] = cups[0];
         (v, cups[0])
     };
 
-    for m in 1..=moves {
+    for _ in 1..=moves {
         let next = |n| cups[n];
         let r = [next(c), next(next(c)), next(next(next(c)))];
-
-        if m <= 10 && DEBUG {
-            println!("-- move {} --", m);
-            println!("             [1, 2, 3, 4, 5, 6, 7, 8, 9]");
-            println!("pointers:    {:?}", &cups[1..]);
-            println!("cups:        {}", format_cups(&cups, c));
-            println!("pick up:     {:?}", r);
-        }
-
         // Remove the cups
         //    /-r[0]->-r[1]->-r[2]-\
         // c ------------------------> X
         cups[c] = cups[r[2]];
-        if m <= 10 && DEBUG {
-            println!("             [1, 2, 3, 4, 5, 6, 7, 8, 9]");
-            println!("pointers:    {:?}", &cups[1..]);
-            println!("cups:        {}", format_cups(&cups, c));
-        }
-
         let d = find_dest(&cups, c, &r);
-
-        if m <= 10 && DEBUG {
-            println!("destination: {}", d);
-            println!();
-        }
-
         // Add the cups back in at destination
         //     /-r[0]->-r[1]->-r[2]-\
         // d -xxxxxxxxxxxxxxxxxxxxxxxx-> X
         cups[r[2]] = cups[d];
         cups[d] = r[0];
-
         // Select the new cup
         c = cups[c];
     }
