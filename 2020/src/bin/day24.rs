@@ -1,21 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 type Point = euclid::Point3D<i64, euclid::UnknownUnit>;
-
-#[derive(Debug)]
-enum Tile {
-    Black,
-    White,
-}
-
-impl Tile {
-    fn flip(&self) -> Self {
-        match self {
-            Tile::Black => Tile::White,
-            Tile::White => Tile::Black,
-        }
-    }
-}
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 enum Dir {
@@ -40,6 +25,23 @@ impl std::ops::Add<Point> for Dir {
             Dir::SW => Point::new(rhs.x - 1, rhs.y, rhs.z + 1),
         }
     }
+}
+
+fn finish_the_floor(input: &str) -> HashSet<Point> {
+    let mut visited: HashSet<Point> = HashSet::new();
+    for instr in parse_input(input) {
+        let p = instr.iter().fold(Point::zero(), |p, &d| d + p);
+        if visited.take(&p).is_none() {
+            visited.insert(p);
+        }
+    }
+    visited
+}
+
+fn neighbours<'a>(p: &'a Point) -> impl Iterator<Item = Point> + 'a {
+    [Dir::E, Dir::W, Dir::NW, Dir::NE, Dir::SE, Dir::SW]
+        .iter()
+        .map(move |&d| d + *p)
 }
 
 fn parse_input<'a>(input: &'a str) -> impl Iterator<Item = Vec<Dir>> + 'a {
@@ -78,26 +80,30 @@ fn parse_input<'a>(input: &'a str) -> impl Iterator<Item = Vec<Dir>> + 'a {
 }
 
 fn part_one(input: &str) -> String {
-    let mut visited: HashMap<Point, Tile> = HashMap::new();
-    for instr in parse_input(input) {
-        let p = instr.iter().fold(Point::zero(), |p, &d| d + p);
-        let t = visited.entry(p).or_insert(Tile::White);
-        *t = t.flip();
-    }
-
-    println!("{:?}", visited);
-    visited
-        .values()
-        .filter(|t| match t {
-            Tile::Black => true,
-            _ => false,
-        })
-        .count()
-        .to_string()
+    finish_the_floor(input).len().to_string()
 }
 
 fn part_two(input: &str) -> String {
-    "".to_string()
+    let mut floor = finish_the_floor(input);
+
+    for _ in 0..100 {
+        let mut ns: HashMap<Point, usize> = HashMap::new();
+        for p in &floor {
+            for n in neighbours(p) {
+                *ns.entry(n).or_insert(0) += 1;
+            }
+        }
+
+        floor = ns
+            .iter()
+            .filter_map(|(&p, &c)| match (floor.contains(&p), c) {
+                (true, 1) | (true, 2) | (false, 2) => Some(p),
+                _ => None,
+            })
+            .collect();
+    }
+
+    floor.len().to_string()
 }
 
 fn main() {
