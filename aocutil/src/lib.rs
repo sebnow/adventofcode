@@ -1,3 +1,4 @@
+mod aoc;
 mod direction;
 mod grid;
 mod iter;
@@ -8,6 +9,7 @@ pub use direction::*;
 pub use grid::*;
 pub use iter::*;
 pub use test::*;
+pub use aoc::*;
 
 #[cfg(test)]
 mod tests {

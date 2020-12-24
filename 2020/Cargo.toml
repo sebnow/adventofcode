@@ -1,5 +1,5 @@
 [package]
-name = "adventofcode2015"
+name = "adventofcode2020"
 version = "0.1.0"
 authors = ["Sebastian Nowicki <sebnow@gmail.com>"]
 edition = "2018"
@@ -12,3 +12,4 @@ aocutil = {path = "../aocutil"}
 itertools = "0.9.0"
 euclid = "^0.22.1"
 rayon = "^1.5.0"
+clap = "^2.33.3"
