@@ -1,143 +1,223 @@
-use aocutil::{Grid, Point};
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 
-type Vector = euclid::Vector2D<i64, euclid::UnknownUnit>;
+//const MONSTER: [&str; 3] = [
+//    "                  # ",
+//    "#    ##    ##    ###",
+//    " #  #  #  #  #  #   ",
+//];
+
+type Degrees = i32;
+type ImageID = i64;
+type PossibleAdjacent = Vec<ImageID>;
+type AdjacentMap = HashMap<ImageID, Vec<PossibleAdjacent>>;
+type Grid = Vec<Vec<char>>;
+
+//trait Transform {
+//    type Item;
+//
+//    fn transform(&mut self) -> Self::Item;
+//}
+//
+//struct ID<I> {
+//    item: I,
+//}
+//
+//impl<I> ID<I> {
+//    fn new(item: I) -> Self {
+//        ID { item }
+//    }
+//}
+//
+//impl<I> Transform for ID<I> {
+//    type Item = I;
+//
+//    fn transform(&mut self) -> Self::Item {
+//        self.item
+//    }
+//}
+//
+//impl<T: std::fmt::Debug> std::fmt::Debug for ID<T> {
+//    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//        f.debug_struct("ID").field("item", &self.item).finish()
+//    }
+//}
+//
+//struct Rotate<T> {
+//    transform: T,
+//    degrees: Degrees,
+//}
+//
+//impl<T> Rotate<T> {
+//    fn new(t: T, degrees: Degrees) -> Self {
+//        Rotate {
+//            transform: t,
+//            degrees,
+//        }
+//    }
+//}
+//
+//impl<T: Transform<Item = Grid>> Transform for Rotate<T> {
+//    type Item = T::Item;
+//
+//    fn transform(&mut self) -> Self::Item {
+//        todo!();
+//    }
+//}
+//
+//impl<T: std::fmt::Debug> std::fmt::Debug for Rotate<T> {
+//    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//        f.debug_struct("Rotate")
+//            .field("transform", &self.transform)
+//            .field("degrees", &self.degrees)
+//            .finish()
+//    }
+//}
+//
+//struct Flip<T> {
+//    transform: T,
+//}
+//
+//impl<T> Flip<T> {
+//    fn new(t: T) -> Self {
+//        Flip { transform: t }
+//    }
+//}
+//
+//impl<T> Transform for Flip<T>
+//where
+//    T: Transform<Item = Grid>,
+//{
+//    type Item = T::Item;
+//
+//    fn transform(&mut self) -> Self::Item {
+//        flip(self.transform().iter())
+//    }
+//}
+//
+//impl<T: std::fmt::Debug> std::fmt::Debug for Flip<T> {
+//    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//        f.debug_struct("Flip")
+//            .field("transform", &self.transform)
+//            .finish()
+//    }
+//}
+
+//#[repr(usize)]
+//enum AdjacentLocation {
+//    Top,
+//    Right,
+//    Bottom,
+//    Left,
+//}
+//
+//impl std::ops::Index<AdjacentLocation> for Vec<AdjacentImageID> {
+//    type Output = Option<i64>;
+//
+//    fn index(&self, index: AdjacentLocation) -> &Self::Output {
+//        &self[index as usize]
+//    }
+//}
+//
+//impl std::ops::IndexMut<AdjacentLocation> for Vec<AdjacentImageID> {
+//    fn index_mut(&mut self, index: AdjacentLocation) -> &mut Self::Output {
+//        &mut self[index as usize]
+//    }
+//}
 
 #[derive(Clone, Debug, PartialEq)]
 struct Image {
     id: i64,
-    grid: Grid<char>,
+    grid: Grid,
 }
 
-//fn flip<T>(g: &Grid<T>) -> Grid<T>
-//where
-//    T: Copy + PartialEq,
-//{
-//    let rows = g.rows() as i64;
-//    let min_x = g.iter().map(|(p, _)| p.x).min().unwrap();
-//
-//    g.iter()
-//        .map(|(p, c)| (Point::new(p.x + rows - (2 * (p.x - min_x)), p.y), *c))
-//        .collect()
-//}
+impl Image {
+    pub fn flip(&self) -> Self {
+        Image {
+            id: self.id,
+            grid: flip(self.grid.iter()),
+        }
+    }
 
-fn flip(g: &Grid<char>) -> Grid<char> {
-    let rendered: String = g.to_string();
-    let flipped: Vec<String> = rendered.lines().rev().map(|l| l.to_string()).collect();
-
-    Grid::from(flipped.join("\n").as_str())
-}
-
-fn rotate(g: &Grid<char>) -> Grid<char> {
-    let r = |p: &Point| Point::new(p.y, p.x * -1);
-    g.iter().map(|(p, c)| (r(p), *c)).collect()
-}
-
-fn bottom(g: &Grid<char>) -> String {
-    let (min, max) = g.bounds();
-
-    (min.x..=max.x)
-        .map(|x| g.get(&Point::new(x, min.y)).unwrap().to_owned())
-        .collect()
-}
-
-fn top(g: &Grid<char>) -> String {
-    let (min, max) = g.bounds();
-
-    (min.x..=max.x)
-        .map(|x| g.get(&Point::new(x, max.y)).unwrap().to_owned())
-        .collect()
-}
-
-fn left(g: &Grid<char>) -> String {
-    let (min, max) = g.bounds();
-
-    (min.y..=max.y)
-        .map(|y| g.get(&Point::new(min.x, y)).unwrap().to_owned())
-        .collect()
-}
-
-fn right(g: &Grid<char>) -> String {
-    let (min, max) = g.bounds();
-
-    (min.y..=max.y)
-        .map(|y| g.get(&Point::new(max.x, y)).unwrap().to_owned())
-        .collect()
-}
-
-fn align_border(a: &Image, b: &Image) -> Option<(Point, Image)> {
-    let ga = &a.grid;
-    [
-        b.grid.to_owned(),
-        rotate(&b.grid),
-        rotate(&rotate(&b.grid)),
-        rotate(&rotate(&rotate(&b.grid))),
-        flip(&b.grid),
-        flip(&rotate(&b.grid)),
-        flip(&rotate(&rotate(&b.grid))),
-        flip(&rotate(&rotate(&rotate(&b.grid)))),
-    ]
-    .iter()
-    .find_map(|gb| {
-        let b_new = Image {
-            id: b.id,
-            grid: gb.to_owned(),
-        };
-
-        if top(&ga) == bottom(&gb) {
-            return Some((Point::new(0, 1), b_new));
+    pub fn rotate(&self, degrees: Degrees) -> Self {
+        let mut g = self.grid.clone();
+        let max_y = self.grid.len() - 1;
+        let mut d = degrees % 360;
+        if d < 0 {
+            d += 360;
         }
 
-        if bottom(&ga) == top(&gb) {
-            return Some((Point::new(0, -1), b_new));
-        }
-
-        if right(&ga) == left(&gb) {
-            return Some((Point::new(1, 0), b_new));
-        }
-
-        if left(&ga) == right(&gb) {
-            return Some((Point::new(-1, 0), b_new));
-        }
-
-        None
-    })
-}
-
-fn align(images: &[Image]) -> Vec<(Point, Image)> {
-    let mut queue: VecDeque<&Image> = images.iter().collect();
-    let mut aligned = vec![(Point::zero(), queue.pop_front().unwrap().to_owned())];
-
-    'queue: while let Some(image) = queue.pop_front() {
-        for b in &aligned {
-            if let Some(m) = align_border(&b.1, &image) {
-                aligned.push(m);
-                continue 'queue;
+        // TODO: Rotate arbitrary amounts properly
+        for _ in 0..(d / 90) {
+            for (y, xs) in self.grid.iter().enumerate() {
+                for (x, &c) in xs.iter().enumerate() {
+                    g[max_y - x][y] = c;
+                }
             }
         }
-        queue.push_back(&image);
-    }
 
-    aligned
-}
-
-fn stitch(images: HashMap<Point, Image>) -> Grid<char> {
-    let (rows, cols) = images
-        .iter()
-        .next()
-        .map(|(_, i)| (i.grid.rows() as i64, i.grid.cols() as i64))
-        .unwrap();
-
-    let mut complete = Grid::new();
-    for (p, img) in &images {
-        for (ip, icell) in img.grid.iter() {
-            complete.insert(Point::new(p.x * cols + ip.x, p.y * rows + ip.y), *icell);
+        Image {
+            id: self.id,
+            grid: g,
         }
     }
+}
 
-    println!("{}", complete);
+fn map_edges(images: &[Image]) -> AdjacentMap {
+    let mut map = AdjacentMap::with_capacity(images.len());
 
-    complete
+    for img in images {
+        let mut matching = vec![vec![]; 4];
+        let img_edges = get_edges(&img.grid);
+
+        images
+            .iter()
+            .filter(|&i| !map.contains_key(&img.id) && i != img)
+            .for_each(|i| {
+                let i_edges = get_edges(&i.grid);
+
+                for (dir, img_edge) in img_edges.iter().enumerate() {
+                    for i_edge in &i_edges {
+                        if img_edge == i_edge || *img_edge == flip(i_edge.iter()) {
+                            matching[dir].push(i.id);
+                        }
+                    }
+                }
+            });
+
+        map.insert(img.id, matching);
+    }
+
+    map
+}
+
+fn flip<'a, I, T>(x: I) -> Vec<T>
+where
+    I: DoubleEndedIterator<Item = &'a T>,
+    T: Clone + 'a,
+{
+    x.into_iter().rev().map(|c| c.to_owned()).collect()
+}
+
+fn get_edges(g: &Grid) -> Vec<Vec<char>> {
+    let (min_x, min_y, max_x, max_y) = (0, 0, g[0].len() - 1, g.len() - 1);
+
+    vec![
+        (min_x..=max_x).map(|x| g[max_y][x]).collect(),
+        (min_y..=max_y).map(|y| g[y][max_x]).collect(),
+        (min_x..=max_x).map(|x| g[min_y][x]).collect(),
+        (min_y..=max_y).map(|y| g[y][min_x]).collect(),
+    ]
+}
+
+fn align(images: &[Image]) -> Vec<Vec<Image>> {
+    todo!();
+}
+
+fn parse_grid<'a, I>(lines: I) -> Grid
+where
+    I: IntoIterator<Item = &'a str>,
+{
+    lines.into_iter().map(|l| l.chars().collect()).collect()
 }
 
 fn parse_input<'a>(input: &'a str) -> Vec<Image> {
@@ -152,13 +232,8 @@ fn parse_input<'a>(input: &'a str) -> Vec<Image> {
                 .nth(1)
                 .map(|id| id[0..id.len() - 1].parse().expect("invalid id"))
                 .expect("missing id");
-            let mut grid = Grid::new();
 
-            for (dy, l) in lines.enumerate() {
-                for (x, c) in l.chars().enumerate() {
-                    grid.insert(Point::new(x as i64, 0 - dy as i64), c);
-                }
-            }
+            let grid = parse_grid(lines);
 
             Image { id, grid }
         })
@@ -166,35 +241,19 @@ fn parse_input<'a>(input: &'a str) -> Vec<Image> {
 }
 
 fn part_one(input: &str) -> String {
-    let images = parse_input(input);
-    let aligned = align(&images);
-    
-    aligned.iter().for_each(|(p, image)| println!("{:?}; {}", p, image.id));
-
-    let mut min = Point::zero();
-    let mut max = Point::zero();
-    for (p, _) in &aligned {
-        min = min.min(*p);
-        max = max.max(*p);
-    }
-
-    [
-        Point::new(min.x, min.y),
-        Point::new(min.x, max.y),
-        Point::new(max.x, min.y),
-        Point::new(max.x, max.y),
-    ]
-    .iter()
-    .flat_map(|p| aligned.iter().find(|(ip, _)| p == ip).map(|(_, i)| i.id))
-    .product::<i64>()
-    .to_string()
+    map_edges(&parse_input(input))
+        .iter()
+        .filter(|(_, e)| e.len() == 2)
+        .map(|(id, _)| id)
+        .product::<i64>()
+        .to_string()
 }
 
 fn part_two(input: &str) -> String {
-    todo!();
-    //    let g = stitch(align(&parse_input(input)));
-    //
-    //    "".to_string()
+    let images = parse_input(input);
+    let edges = map_edges(&images);
+    println!("{:?}", edges);
+    "".to_string()
 }
 
 fn main() {
@@ -207,54 +266,79 @@ fn main() {
 mod test {
     use super::*;
     use aocutil::test_example;
+    use itertools::Itertools;
+    use pretty_assertions::assert_eq;
+    use std::collections::BTreeMap;
 
     test_example!(example_one_1, part_one, 20, 1, 1);
     test_example!(example_two_1, part_two, 20, 2, 1);
 
     #[test]
-    fn test_align_border_normal() {
-        let a = Image {
-            id: 1951,
-            grid: Grid::from(
-                r#"#.##...##.
-#.####...#
-.....#..##
-#...######
-.##.#....#
-.###.#####
-###.##.##.
-.###....#.
-..#.#..#.#
-#...##.#.."#,
-            ),
-        };
+    fn test_parse_grid() {
+        let expected = r#"#.##...##.
+##..#.##..
+##.####...
+####.#.#..
+.#.####...
+.##..##.#.
+....#..#.#
+..#.#.....
+####.#....
+...#.#.#.#"#;
 
-        let b = Image {
-            id: 2311,
-            grid: Grid::from(
-                r#"..##.#..#.
-##..#.....
-#...##..#.
-####.#...#
-##.##.###.
-##...#.###
-.#.#.#..##
-..#....#..
-###...#.#.
-..###..###"#,
-            ),
-        };
-
-        let aligned = align_border(&a, &b).unwrap();
-        assert_eq!(aligned.1.id, b.id);
-        assert_eq!(aligned.1.grid.to_string(), b.grid.to_string());
-        assert_eq!(aligned.0, Point::new(1, 0));
+        let grid = parse_grid(expected.lines());
+        let rendered: String = grid.iter().map(|l| l.iter().collect::<String>()).join("\n");
+        assert_eq!(rendered, expected);
     }
+
+    //    #[test]
+    //    fn test_align_border_normal() {
+    //        let a = Image {
+    //            id: 1951,
+    //            grid: parse_grid(
+    //                r#"#.##...##.
+    //#.####...#
+    //.....#..##
+    //#...######
+    //.##.#....#
+    //.###.#####
+    //###.##.##.
+    //.###....#.
+    //..#.#..#.#
+    //#...##.#.."#
+    //                    .lines(),
+    //            ),
+    //        };
+    //
+    //        let b = Image {
+    //            id: 2311,
+    //            grid: parse_grid(
+    //                r#"..##.#..#.
+    //##..#.....
+    //#...##..#.
+    //####.#...#
+    //##.##.###.
+    //##...#.###
+    //.#.#.#..##
+    //..#....#..
+    //###...#.#.
+    //..###..###"#
+    //                    .lines(),
+    //            ),
+    //        };
+    //
+    //        let aligned = align_border(&a, &b).unwrap();
+    //        assert_eq!(aligned.1.id, b.id);
+    //        assert_eq!(aligned.1.grid.to_string(), b.grid.to_string());
+    //        assert_eq!(aligned.0, Point::new(1, 0));
+    //    }
 
     #[test]
     fn test_flip() {
-        let original = Grid::from(
-            r#"#.##...##.
+        let original = Image {
+            id: 1951,
+            grid: parse_grid(
+                r#"#.##...##.
 ##..#.##..
 ##.####...
 ####.#.#..
@@ -263,11 +347,15 @@ mod test {
 ....#..#.#
 ..#.#.....
 ####.#....
-...#.#.#.#"#,
-        );
+...#.#.#.#"#
+                    .lines(),
+            ),
+        };
 
-        let expected = Grid::from(
-            r#"...#.#.#.#
+        let expected = Image {
+            id: 1951,
+            grid: parse_grid(
+                r#"...#.#.#.#
 ####.#....
 ..#.#.....
 ....#..#.#
@@ -276,17 +364,21 @@ mod test {
 ####.#.#..
 ##.####...
 ##..#.##..
-#.##...##."#,
-        );
+#.##...##."#
+                    .lines(),
+            ),
+        };
 
-        assert_eq!(flip(&original).to_string(), expected.to_string());
-        assert_eq!(flip(&flip(&original)).to_string(), original.to_string());
+        assert_eq!(original.flip(), expected);
+        assert_eq!(original.flip().flip(), original);
     }
 
     #[test]
     fn test_rotate() {
-        let original = Grid::from(
-            r#"#....####.
+        let original = Image {
+            id: 1,
+            grid: parse_grid(
+                r#"#....####.
 #..#.##...
 #.##..#...
 ######.#.#
@@ -295,11 +387,15 @@ mod test {
 .###.#..#.
 ########.#
 ##...##.#.
-..###.#.#."#,
-        );
+..###.#.#."#
+                    .lines(),
+            ),
+        };
 
-        let expected = Grid::from(
-            r#".##...####
+        let expected = Image {
+            id: original.id,
+            grid: parse_grid(
+                r#".##...####
 .######...
 #.###.##..
 #.###.###.
@@ -308,13 +404,56 @@ mod test {
 ###.#..###
 ..#.###..#
 ##.##....#
-..#.###..."#,
-        );
+..#.###..."#
+                    .lines(),
+            ),
+        };
 
-        assert_eq!(rotate(&original).to_string(), expected.to_string());
-        assert_eq!(
-            rotate(&rotate(&rotate(&rotate(&original)))).to_string(),
-            original.to_string()
+        assert_eq!(original.rotate(90), expected);
+        assert_eq!(original.rotate(270).rotate(90), original);
+    }
+
+    #[test]
+    fn test_map_edges() {
+        // 1951    2311    3079
+        // 2729    1427    2473
+        // 2971    1489    1171
+        let input = include_str!("../../example/day20-01-01.txt");
+        let images = parse_input(input);
+        // Use a BTreeMap so that the keys are ordered, which makes the diff output actually work.
+        let edges: BTreeMap<i64, Vec<Vec<ImageID>>> = map_edges(&images)
+            .iter()
+            .map(|(k, v)| (*k, v.clone()))
+            .collect();
+
+        let i = |id| id;
+
+        let mut expected = BTreeMap::new();
+        expected.insert(1951, vec![vec![], vec![i(2311)], vec![i(2729)], vec![]]);
+        expected.insert(
+            2311,
+            vec![vec![], vec![i(3079)], vec![i(1427)], vec![i(1951)]],
         );
+        expected.insert(3079, vec![vec![], vec![], vec![i(2473)], vec![i(2311)]]);
+        expected.insert(
+            2729,
+            vec![vec![i(1951)], vec![i(1427)], vec![i(2971)], vec![]],
+        );
+        expected.insert(
+            1427,
+            vec![vec![i(2311)], vec![i(2473)], vec![i(1489)], vec![i(2729)]],
+        );
+        expected.insert(
+            2473,
+            vec![vec![i(3079)], vec![], vec![i(1171)], vec![i(1427)]],
+        );
+        expected.insert(2971, vec![vec![i(2729)], vec![i(1489)], vec![], vec![]]);
+        expected.insert(
+            1489,
+            vec![vec![i(1427)], vec![i(1171)], vec![], vec![i(2971)]],
+        );
+        expected.insert(1171, vec![vec![i(2473)], vec![], vec![], vec![i(1489)]]);
+
+        assert_eq!(edges, expected);
     }
 }
