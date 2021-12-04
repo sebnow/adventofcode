@@ -68,31 +68,9 @@ fn score(b: &Board) -> u32 {
         .sum()
 }
 
-fn part_one(s: &str) -> String {
+fn wins(s: &str) -> Vec<(Board, u32)> {
     let mut input = parse_input(s);
-
-    for drawn_number in input.numbers {
-        for board_num in 0..input.boards.len() {
-            for y in 0..input.boards[board_num].len() {
-                for x in 0..input.boards[board_num][y].len() {
-                    if input.boards[board_num][y][x] == BingoCell::Unmarked(drawn_number) {
-                        input.boards[board_num][y][x] = BingoCell::Marked(drawn_number);
-                    }
-                }
-            }
-
-            if has_bingo(&input.boards[board_num]) {
-                return format!("{}", score(&input.boards[board_num]) * drawn_number);
-            }
-        }
-    }
-
-    "0".into()
-}
-
-fn part_two(s: &str) -> String {
-    let mut input = parse_input(s);
-    let mut last_score = 0;
+    let mut wins = Vec::with_capacity(input.boards.len());
 
     for drawn_number in input.numbers {
         for board_num in 0..input.boards.len() {
@@ -109,12 +87,24 @@ fn part_two(s: &str) -> String {
             }
 
             if has_bingo(&input.boards[board_num]) {
-                last_score = score(&input.boards[board_num]) * drawn_number;
+                wins.push((input.boards[board_num].clone(), drawn_number));
             }
         }
     }
 
-    format!("{}", last_score).into()
+    wins
+}
+
+fn part_one(s: &str) -> String {
+    let wins = wins(s);
+    format!("{}", score(&wins[0].0) * wins[0].1)
+}
+
+fn part_two(s: &str) -> String {
+    let wins = wins(s);
+    let last_win = wins.iter().last().unwrap();
+
+    format!("{}", score(&last_win.0) * last_win.1)
 }
 
 fn main() -> Result<()> {
