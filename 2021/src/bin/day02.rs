@@ -56,6 +56,6 @@ mod test {
     use super::*;
     use aocutil::test_example;
 
-    test_example!(example_1_1, part_one, 2, 1, 1);
-    test_example!(example_2_1, part_two, 2, 2, 1);
+    test_example!(example_2_1, part_one, 2, 1, 1);
+    test_example!(example_2_2, part_two, 2, 2, 1);
 }
