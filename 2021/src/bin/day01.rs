@@ -59,5 +59,5 @@ mod test {
     use aocutil::test_example;
 
     test_example!(example_1_1, part_one, 1, 1, 1);
-    test_example!(example_2_1, part_two, 1, 2, 1);
+    test_example!(example_1_2, part_two, 1, 2, 1);
 }
