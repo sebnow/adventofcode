@@ -1,0 +1,39 @@
+name: Rust
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches: 
+      - master
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        dir:
+          - aocutil
+          - 2015
+          - 2019
+          - 2020
+          - 2021
+    runs-on: ubuntu-latest
+    name: Test (${{ matrix.dir }})
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+      - uses: Swatinem/rust-cache@v1
+      - name: Build (${{ matrix.dir }})
+        run: cargo build --verbose
+        working-directory: ${{ matrix.dir }}
+      - name: Test (${{ matrix.dir }})
+        run: cargo test --verbose
+        working-directory: ${{ matrix.dir }}
+        continue-on-error: true
