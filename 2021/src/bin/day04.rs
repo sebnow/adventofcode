@@ -1,6 +1,3 @@
-use anyhow::{anyhow, Result};
-use aocutil::Grid;
-
 #[derive(PartialEq, Copy, Clone)]
 enum BingoCell {
     Marked(u32),
@@ -39,20 +36,16 @@ fn parse_input(s: &str) -> Input {
     Input { numbers, boards }
 }
 
-fn has_bingo(b: &Board) -> bool {
-    let row_bingo = (0..b.len()).any(|y| {
-        (0..b[y].len()).all(|x| match b[y][x] {
-            BingoCell::Marked(_) => true,
-            _ => false,
-        })
-    });
+fn is_marked(c: BingoCell) -> bool {
+    match c {
+        BingoCell::Marked(_) => true,
+        _ => false,
+    }
+}
 
-    let col_bingo = (0..b[0].len()).any(|x| {
-        (0..b[x].len()).all(|y| match b[y][x] {
-            BingoCell::Marked(_) => true,
-            _ => false,
-        })
-    });
+fn has_bingo(b: &Board) -> bool {
+    let row_bingo = (0..b.len()).any(|y| (0..b[y].len()).all(|x| is_marked(b[y][x])));
+    let col_bingo = (0..b[0].len()).any(|x| (0..b[x].len()).all(|y| is_marked(b[y][x])));
 
     row_bingo || col_bingo
 }
@@ -107,12 +100,10 @@ fn part_two(s: &str) -> String {
     format!("{}", score(&last_win.0) * last_win.1)
 }
 
-fn main() -> Result<()> {
+fn main() {
     let input = include_str!("../../input/day04.txt");
     println!("Part one: {}", part_one(&input));
     println!("Part two: {}", part_two(&input));
-
-    Ok(())
 }
 
 #[cfg(test)]
