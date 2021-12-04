@@ -40,49 +40,21 @@ fn parse_input(s: &str) -> Input {
 }
 
 fn has_bingo(b: &Board) -> bool {
-    for y in 0..b.len() {
-        let mut row_marked = true;
+    let row_bingo = (0..b.len()).any(|y| {
+        (0..b[y].len()).all(|x| match b[y][x] {
+            BingoCell::Marked(_) => true,
+            _ => false,
+        })
+    });
 
-        for x in 0..b[y].len() {
-            let is_marked = match b[y][x] {
-                BingoCell::Marked(_) => true,
-                _ => false,
-            };
+    let col_bingo = (0..b[0].len()).any(|x| {
+        (0..b[x].len()).all(|y| match b[y][x] {
+            BingoCell::Marked(_) => true,
+            _ => false,
+        })
+    });
 
-            row_marked = row_marked && is_marked;
-
-            if !row_marked {
-                break;
-            }
-        }
-
-        if row_marked {
-            return true;
-        }
-    }
-
-    for x in 0..b[0].len() {
-        let mut col_marked = true;
-
-        for y in 0..b[x].len() {
-            let is_marked = match b[y][x] {
-                BingoCell::Marked(_) => true,
-                _ => false,
-            };
-
-            col_marked = col_marked && is_marked;
-
-            if !col_marked {
-                break;
-            }
-        }
-
-        if col_marked {
-            return true;
-        }
-    }
-
-    false
+    row_bingo || col_bingo
 }
 
 fn score(b: &Board) -> u32 {
