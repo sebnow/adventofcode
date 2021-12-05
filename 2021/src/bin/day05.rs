@@ -4,18 +4,17 @@ use std::iter::Iterator;
 
 type Segment = (Point, Point);
 
-fn parse_input(s: &str) -> Vec<Segment> {
+fn parse_input<'a>(s: &'a str) -> impl Iterator<Item = Segment> + 'a{
     s.lines()
         .map(|l| {
             let mut points = l.split(" -> ").map(|p| {
-                let mut ns = p.split(",").map(|n| n.parse::<i64>().unwrap());
+                let mut ns = p.split(",").map(|n| n.parse().unwrap());
 
                 Point::new(ns.next().unwrap(), ns.next().unwrap())
             });
 
             (points.next().unwrap(), points.next().unwrap())
         })
-        .collect()
 }
 
 fn points((a, b): Segment) -> Vec<Point> {
@@ -49,21 +48,7 @@ fn points((a, b): Segment) -> Vec<Point> {
     }
 }
 
-fn part_one(s: &str) -> String {
-    let segments = parse_input(s);
-    let mut grid: HashMap<Point, usize> = HashMap::new();
-
-    for &s in segments.iter().filter(|(a, b)| a.x == b.x || a.y == b.y) {
-        for p in points(s) {
-            *grid.entry(p).or_insert(0) += 1;
-        }
-    }
-
-    format!("{}", grid.values().filter(|&x| *x >= 2 as usize).count())
-}
-
-fn part_two(s: &str) -> String {
-    let segments = parse_input(s);
+fn count_crossing<I: Iterator<Item=Segment>>(segments: I) -> usize {
     let mut grid: HashMap<Point, usize> = HashMap::new();
 
     for s in segments {
@@ -72,7 +57,17 @@ fn part_two(s: &str) -> String {
         }
     }
 
-    format!("{}", grid.values().filter(|&x| *x >= 2 as usize).count())
+    grid.values().filter(|&x| *x >= 2 as usize).count()
+}
+
+fn part_one(s: &str) -> String {
+    let segments = parse_input(s);
+    format!("{}", count_crossing(segments.filter(|(a, b)| a.x == b.x || a.y == b.y)))
+}
+
+fn part_two(s: &str) -> String {
+    let segments = parse_input(s);
+    format!("{}", count_crossing(segments))
 }
 
 fn main() {
