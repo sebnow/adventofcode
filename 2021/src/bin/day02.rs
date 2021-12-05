@@ -1,17 +1,9 @@
-use anyhow::{anyhow, Result};
-
 #[derive(Default)]
 struct Pos {
     d: i32,
     y: i32,
     aim: i32,
 }
-
-//fn parse_input(s: &str) -> Result<Vec<u32>> {
-//    s.lines()
-//        .map(|l| l.parse().map_err(|e| anyhow!("failed to parse {}", e)))
-//        .collect()
-//}
 
 fn part_one(s: &str) -> String {
     let pos = s.lines().fold(Pos::default(), |p, l| {
@@ -43,12 +35,10 @@ fn part_two(s: &str) -> String {
     format!("{}", pos.y * pos.d)
 }
 
-fn main() -> Result<()> {
+fn main() {
     let input = include_str!("../../input/day02.txt");
     println!("Part one: {}", part_one(&input));
     println!("Part two: {}", part_two(&input));
-
-    Ok(())
 }
 
 #[cfg(test)]
