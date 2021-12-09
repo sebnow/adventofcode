@@ -36,19 +36,14 @@ where
 {
     // TODO: Make this generic over any nested iterable
     pub fn from_vec2d(v: Vec<Vec<T>>) -> Self {
-        let mut g = Grid {
-            coords: HashMap::default(),
-            x_bounds: (0, 0),
-            y_bounds: (0, 0),
-        };
-
-        for (y, row) in v.iter().enumerate() {
-            for (x, cell) in row.iter().enumerate() {
-                g.insert(Point::new(x as i64, 0 - y as i64), *cell);
-            }
-        }
-
-        g
+        v.iter()
+            .enumerate()
+            .flat_map(|(y, row)| {
+                row.iter()
+                    .enumerate()
+                    .map(move |(x, &cell)| (Point::new(x as i64, 0 - y as i64), cell))
+            })
+            .collect()
     }
 
     pub fn insert(&mut self, p: Point, v: T) {
