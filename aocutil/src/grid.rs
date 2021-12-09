@@ -1,6 +1,7 @@
 use euclid;
 use std::collections::HashMap;
 use std::iter;
+use std::iter::FromIterator;
 
 pub trait Collision {
     fn is_collidable(&self) -> bool;
@@ -133,6 +134,21 @@ where
     }
 }
 
+impl<T> FromIterator<(Point, T)> for Grid<T>
+where
+    T: PartialEq + std::marker::Copy,
+{
+    fn from_iter<I: IntoIterator<Item = (Point, T)>>(iter: I) -> Self {
+        let mut g = Grid::new();
+
+        for (p, c) in iter {
+            g.insert(p, c);
+        }
+
+        g
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -232,5 +248,16 @@ d e"#,
             Vec::<(Point, &char)>::new(),
             g.surrounding(&Point::new(1, -1), !MASK_ALL)
         );
+    }
+
+    #[test]
+    fn from_tuple_iter() {
+        let g: Grid<char> = [(Point::new(0, 0), 'a'), (Point::new(2, 1), 'c')]
+            .iter()
+            .copied()
+            .collect();
+
+        assert_eq!(g.get(&Point::new(0, 0)).unwrap(), &'a');
+        assert_eq!(g.get(&Point::new(2, 1)).unwrap(), &'c');
     }
 }
