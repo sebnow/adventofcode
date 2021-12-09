@@ -135,12 +135,19 @@ where
 {
     fn from_iter<I: IntoIterator<Item = (Point, T)>>(iter: I) -> Self {
         let mut g = Grid::new();
-
-        for (p, c) in iter {
-            g.insert(p, c);
-        }
-
+        g.extend(iter);
         g
+    }
+}
+
+impl<T> Extend<(Point, T)> for Grid<T>
+where
+    T: PartialEq + std::marker::Copy,
+{
+    fn extend<I: IntoIterator<Item = (Point, T)>>(&mut self, iter: I) {
+        for (p, c) in iter {
+            self.insert(p, c);
+        }
     }
 }
 
@@ -251,6 +258,16 @@ d e"#,
             .iter()
             .copied()
             .collect();
+
+        assert_eq!(g.get(&Point::new(0, 0)).unwrap(), &'a');
+        assert_eq!(g.get(&Point::new(2, 1)).unwrap(), &'c');
+    }
+
+    #[test]
+    fn extend_tuple() {
+        let mut g: Grid<char> = [(Point::new(0, 0), 'a')].iter().copied().collect();
+
+        g.extend([(Point::new(2, 1), 'c')]);
 
         assert_eq!(g.get(&Point::new(0, 0)).unwrap(), &'a');
         assert_eq!(g.get(&Point::new(2, 1)).unwrap(), &'c');
