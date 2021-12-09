@@ -105,7 +105,6 @@ fn part_one(input: &str) -> String {
         for (&p, t) in prev.iter() {
             let occupied = prev
                 .surrounding(&p, MASK_ALL)
-                .iter()
                 .filter(|(_, t)| match t {
                     Tile::Occupied => true,
                     _ => false,

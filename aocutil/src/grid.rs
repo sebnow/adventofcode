@@ -1,4 +1,3 @@
-use euclid;
 use std::collections::HashMap;
 use std::iter;
 use std::iter::FromIterator;
@@ -82,28 +81,8 @@ where
     /// +---+---+---+
     /// | 2 | 1 | 0 |
     /// +---+---+---+
-    pub fn surrounding(&self, p: &Point, mask: u8) -> Vec<(Point, &T)> {
-        [
-            Point::new(p.x - 1, p.y + 1),
-            Point::new(p.x, p.y + 1),
-            Point::new(p.x + 1, p.y + 1),
-            Point::new(p.x - 1, p.y),
-            Point::new(p.x + 1, p.y),
-            Point::new(p.x - 1, p.y - 1),
-            Point::new(p.x, p.y - 1),
-            Point::new(p.x + 1, p.y - 1),
-        ]
-        .iter()
-        .enumerate()
-        .filter_map(|(idx, s)| {
-            let cell = 1 << (7 - idx);
-            if mask & cell == cell {
-                self.coords.get(s).map(|v| (s.clone(), v))
-            } else {
-                None
-            }
-        })
-        .collect()
+    pub fn surrounding(&self, p: &Point, mask: u8) -> Surrounding<T> {
+        Surrounding::new(self, p, mask)
     }
 }
 
@@ -122,7 +101,7 @@ where
             }
 
             if y != self.y_bounds.0 {
-                write!(f, "\n")?;
+                writeln!(f)?;
             }
         }
         Ok(())
@@ -148,6 +127,63 @@ where
         for (p, c) in iter {
             self.insert(p, c);
         }
+    }
+}
+
+pub struct Surrounding<'a, T> {
+    grid: &'a Grid<T>,
+    points: [Option<Point>; 8],
+    index: usize,
+}
+
+impl<'a, T> Surrounding<'a, T> {
+    pub fn new(grid: &'a Grid<T>, point: &Point, mask: u8) -> Self {
+        let all = [
+            Point::new(point.x - 1, point.y + 1),
+            Point::new(point.x, point.y + 1),
+            Point::new(point.x + 1, point.y + 1),
+            Point::new(point.x - 1, point.y),
+            Point::new(point.x + 1, point.y),
+            Point::new(point.x - 1, point.y - 1),
+            Point::new(point.x, point.y - 1),
+            Point::new(point.x + 1, point.y - 1),
+        ];
+
+        let mut points = [None; 8];
+
+        let mut idx = 0;
+        for (bit, &p) in all.iter().enumerate() {
+            let cell = 1 << (7 - bit);
+            if mask & cell == cell {
+                points[idx] = Some(p);
+                idx += 1;
+            }
+        }
+
+        Surrounding {
+            grid,
+            index: 0,
+            points,
+        }
+    }
+}
+
+impl<'a, T> Iterator for Surrounding<'a, T>
+where
+    T: PartialEq + Copy,
+{
+    type Item = (Point, &'a T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let &Some(p) = self.points.get(self.index)? {
+            self.index += 1;
+
+            if let Some(c) = self.grid.get(&p) {
+                return Some((p, c));
+            }
+        }
+
+        None
     }
 }
 
@@ -220,6 +256,7 @@ d e"#,
                 (Point::new(1, -2), &'h')
             ],
             g.surrounding(&Point::new(1, -1), MASK_CROSSHAIR)
+                .collect::<Vec<_>>()
         );
 
         assert_eq!(
@@ -230,6 +267,39 @@ d e"#,
                 (Point::new(2, -2), &'i'),
             ],
             g.surrounding(&Point::new(1, -1), !MASK_CROSSHAIR)
+                .collect::<Vec<_>>()
+        );
+
+        assert_eq!(
+            vec![(Point::new(1, 0), &'b'), (Point::new(0, -1), &'d'),],
+            g.surrounding(&Point::new(0, 0), MASK_CROSSHAIR)
+                .collect::<Vec<_>>()
+        );
+
+        assert_eq!(
+            vec![
+                (Point::new(1, 0), &'b'),
+                (Point::new(0, -1), &'d'),
+                (Point::new(1, -1), &'e'),
+            ],
+            g.surrounding(&Point::new(0, 0), MASK_ALL)
+                .collect::<Vec<_>>()
+        );
+
+        assert_eq!(
+            vec![(Point::new(2, -1), &'f'), (Point::new(1, -2), &'h'),],
+            g.surrounding(&Point::new(2, -2), MASK_CROSSHAIR)
+                .collect::<Vec<_>>()
+        );
+
+        assert_eq!(
+            vec![
+                (Point::new(1, -1), &'e'),
+                (Point::new(2, -1), &'f'),
+                (Point::new(1, -2), &'h'),
+            ],
+            g.surrounding(&Point::new(2, -2), MASK_ALL)
+                .collect::<Vec<_>>()
         );
 
         assert_eq!(
@@ -244,11 +314,13 @@ d e"#,
                 (Point::new(2, -2), &'i')
             ],
             g.surrounding(&Point::new(1, -1), MASK_ALL)
+                .collect::<Vec<_>>()
         );
 
         assert_eq!(
             Vec::<(Point, &char)>::new(),
             g.surrounding(&Point::new(1, -1), !MASK_ALL)
+                .collect::<Vec<_>>()
         );
     }
 

@@ -20,9 +20,7 @@ fn part_one(s: &str) -> String {
     let output: u32 = grid
         .iter()
         .filter_map(|(&p, &x)| {
-            let around = grid.surrounding(&p, MASK_CROSSHAIR);
-
-            if around.iter().all(|(_, &y)| x < y) {
+            if grid.surrounding(&p, MASK_CROSSHAIR).all(|(_, &y)| x < y) {
                 Some(x + 1)
             } else {
                 None
@@ -46,11 +44,14 @@ impl Basin {
                 continue;
             }
 
-            self.queue.extend(
-                grid.surrounding(&p, MASK_CROSSHAIR)
-                    .iter()
-                    .filter_map(|(p, &x)| if x < 9 { Some(p) } else { None }),
-            );
+            self.queue
+                .extend(grid.surrounding(&p, MASK_CROSSHAIR).filter_map(|(p, &x)| {
+                    if x < 9 {
+                        Some(p)
+                    } else {
+                        None
+                    }
+                }));
 
             self.visited.insert(p);
         }
@@ -65,10 +66,7 @@ fn part_two(s: &str) -> String {
     // count all unique points
     let basins: usize = grid
         .iter()
-        .filter(|(&p, &x)| {
-            let around = grid.surrounding(&p, MASK_CROSSHAIR);
-            around.iter().all(|(_, &y)| x < y)
-        })
+        .filter(|(&p, &x)| grid.surrounding(&p, MASK_CROSSHAIR).all(|(_, &y)| x < y))
         .map(|(&p, _)| {
             let mut b = Basin::default();
             b.queue.push_back(p);
