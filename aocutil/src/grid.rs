@@ -59,6 +59,10 @@ where
         self.coords.get(p)
     }
 
+    pub fn get_mut(&mut self, p: &Point) -> Option<&mut T> {
+        self.coords.get_mut(p)
+    }
+
     pub fn iter(&self) -> impl iter::Iterator<Item = (&Point, &T)> {
         self.coords.iter()
     }
@@ -69,6 +73,10 @@ where
 
     pub fn cols(&self) -> usize {
         (self.x_bounds.1 - self.x_bounds.0) as usize
+    }
+
+    pub fn len(&self) -> usize {
+        self.coords.len()
     }
 
     /// Return cells surrounding `p` according to `mask`. The `mask` bit positions map to cells in
@@ -130,6 +138,7 @@ where
     }
 }
 
+#[must_use]
 pub struct Surrounding<'a, T> {
     grid: &'a Grid<T>,
     points: [Option<Point>; 8],
