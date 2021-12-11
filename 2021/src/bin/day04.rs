@@ -5,6 +5,7 @@ enum BingoCell {
 }
 
 type Board = Vec<Vec<BingoCell>>;
+type BoardSlice = [Vec<BingoCell>];
 
 struct Input {
     numbers: Vec<u32>,
@@ -27,7 +28,7 @@ fn parse_input(s: &str) -> Input {
     let numbers: Vec<u32> = parts
         .next()
         .unwrap()
-        .split(",")
+        .split(',')
         .map(|x| x.parse().unwrap())
         .collect();
 
@@ -36,21 +37,20 @@ fn parse_input(s: &str) -> Input {
     Input { numbers, boards }
 }
 
+#[inline]
 fn is_marked(c: BingoCell) -> bool {
-    match c {
-        BingoCell::Marked(_) => true,
-        _ => false,
-    }
+    matches!(c, BingoCell::Marked(_))
 }
 
-fn has_bingo(b: &Board) -> bool {
+#[inline]
+fn has_bingo(b: &BoardSlice) -> bool {
     let row_bingo = (0..b.len()).any(|y| (0..b[y].len()).all(|x| is_marked(b[y][x])));
     let col_bingo = (0..b[0].len()).any(|x| (0..b[x].len()).all(|y| is_marked(b[y][x])));
 
     row_bingo || col_bingo
 }
 
-fn score(b: &Board) -> u32 {
+fn score(b: &BoardSlice) -> u32 {
     b.iter()
         .flat_map(|row| {
             row.iter().filter_map(|&c| match c {
@@ -102,8 +102,8 @@ fn part_two(s: &str) -> String {
 
 fn main() {
     let input = include_str!("../../input/day04.txt");
-    println!("Part one: {}", part_one(&input));
-    println!("Part two: {}", part_two(&input));
+    println!("Part one: {}", part_one(input));
+    println!("Part two: {}", part_two(input));
 }
 
 #[cfg(test)]

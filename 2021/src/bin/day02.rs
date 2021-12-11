@@ -7,7 +7,7 @@ struct Pos {
 
 fn part_one(s: &str) -> String {
     let pos = s.lines().fold(Pos::default(), |p, l| {
-        let parts: Vec<_> = l.split(" ").collect();
+        let parts: Vec<_> = l.split(' ').collect();
         let units: i32 = parts[1].parse().unwrap();
         match parts[0] {
             "forward" => Pos{y: p.y + units, ..p},
@@ -22,7 +22,7 @@ fn part_one(s: &str) -> String {
 
 fn part_two(s: &str) -> String {
     let pos = s.lines().fold(Pos::default(), |p, l| {
-        let parts: Vec<_> = l.split(" ").collect();
+        let parts: Vec<_> = l.split(' ').collect();
         let units: i32 = parts[1].parse().unwrap();
         match parts[0] {
             "forward" => Pos{y: p.y + units, d: p.d + p.aim * units, ..p},
@@ -37,8 +37,8 @@ fn part_two(s: &str) -> String {
 
 fn main() {
     let input = include_str!("../../input/day02.txt");
-    println!("Part one: {}", part_one(&input));
-    println!("Part two: {}", part_two(&input));
+    println!("Part one: {}", part_one(input));
+    println!("Part two: {}", part_two(input));
 }
 
 #[cfg(test)]

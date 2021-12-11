@@ -4,10 +4,10 @@ use std::iter::Iterator;
 
 type Segment = (Point, Point);
 
-fn parse_input<'a>(s: &'a str) -> impl Iterator<Item = Segment> + 'a {
+fn parse_input(s: &str) -> impl Iterator<Item = Segment> + '_ {
     s.lines().map(|l| {
         let mut points = l.split(" -> ").map(|p| {
-            let mut ns = p.split(",").map(|n| n.parse().unwrap());
+            let mut ns = p.split(',').map(|n| n.parse().unwrap());
 
             Point::new(ns.next().unwrap(), ns.next().unwrap())
         });
@@ -50,7 +50,7 @@ fn count_crossing<I: Iterator<Item = Segment>>(segments: I) -> usize {
         }
     }
 
-    grid.values().filter(|&x| *x >= 2 as usize).count()
+    grid.values().filter(|&x| *x >= 2).count()
 }
 
 fn part_one(s: &str) -> String {
@@ -68,8 +68,8 @@ fn part_two(s: &str) -> String {
 
 fn main() {
     let input = include_str!("../../input/day05.txt");
-    println!("Part one: {}", part_one(&input));
-    println!("Part two: {}", part_two(&input));
+    println!("Part one: {}", part_one(input));
+    println!("Part two: {}", part_two(input));
 }
 
 #[cfg(test)]

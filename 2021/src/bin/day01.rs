@@ -26,7 +26,7 @@ fn part_two(s: &str) -> String {
     let mut sums: Vec<u32> = Vec::new();
 
     for i in 0..input.len() {
-        let window: Vec<u32> = input.iter().skip(i).take(3).map(|&x| x).collect();
+        let window: Vec<u32> = input.iter().skip(i).take(3).copied().collect();
         if window.len() == 3 {
             sums.push(window.iter().sum());
         }
@@ -47,8 +47,8 @@ fn part_two(s: &str) -> String {
 
 fn main() -> Result<()> {
     let input = include_str!("../../input/day01.txt");
-    println!("Part one: {}", part_one(&input));
-    println!("Part two: {}", part_two(&input));
+    println!("Part one: {}", part_one(input));
+    println!("Part two: {}", part_two(input));
 
     Ok(())
 }

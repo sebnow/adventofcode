@@ -3,14 +3,14 @@ struct Fish {
     days_to_spawn: u32,
 }
 
-fn parse_input<'a>(s: &'a str) -> impl Iterator<Item = Fish> + 'a {
-    s.trim().split(",").map(|x| Fish {
+fn parse_input(s: &str) -> impl Iterator<Item = Fish> + '_ {
+    s.trim().split(',').map(|x| Fish {
         days_to_spawn: x.parse().unwrap(),
     })
 }
 
 fn breed_for_days(s: &str, n: usize) -> usize {
-    let mut fishies = [0 as usize; 9];
+    let mut fishies = [0; 9];
 
     for f in parse_input(s) {
         fishies[f.days_to_spawn as usize] += 1;

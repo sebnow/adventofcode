@@ -9,9 +9,9 @@ fn part_one(s: &str) -> String {
 
         if sum as usize > report.len() / 2 {
             gamma = (gamma << 1) + 1;
-            epsilon = epsilon << 1;
+            epsilon <<= 1;
         } else {
-            gamma = gamma << 1;
+            gamma <<= 1;
             epsilon = (epsilon << 1) + 1;
         }
     }
@@ -19,7 +19,7 @@ fn part_one(s: &str) -> String {
     format!("{}", gamma * epsilon)
 }
 
-fn count_set(report: &Vec<Vec<char>>, pos: usize) -> usize {
+fn count_set(report: &[&Vec<char>], pos: usize) -> usize {
     report
         .iter()
         .map(|r| match r[pos] {
@@ -30,8 +30,8 @@ fn count_set(report: &Vec<Vec<char>>, pos: usize) -> usize {
         .sum::<u32>() as usize
 }
 
-fn o_rating(report: &Vec<Vec<char>>) -> u32 {
-    let mut report = report.clone();
+fn o_rating(report: &[Vec<char>]) -> u32 {
+    let mut report: Vec<_> = report.iter().collect();
 
     for pos in 0..report[0].len() {
         let amount_set = count_set(&report, pos);
@@ -51,8 +51,8 @@ fn o_rating(report: &Vec<Vec<char>>) -> u32 {
     0
 }
 
-fn co2_rating(report: &Vec<Vec<char>>) -> u32 {
-    let mut report = report.clone();
+fn co2_rating(report: &[Vec<char>]) -> u32 {
+    let mut report : Vec<_>= report.iter().collect();
 
     for pos in 0..report[0].len() {
         let amount_set = count_set(&report, pos);
@@ -80,8 +80,8 @@ fn part_two(s: &str) -> String {
 
 fn main() {
     let input = include_str!("../../input/day03.txt");
-    println!("Part one: {}", part_one(&input));
-    println!("Part two: {}", part_two(&input));
+    println!("Part one: {}", part_one(input));
+    println!("Part two: {}", part_two(input));
 }
 
 #[cfg(test)]
