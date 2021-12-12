@@ -1,5 +1,4 @@
 use anyhow::{anyhow, Result};
-use itertools::Itertools;
 use std::collections::{HashMap, HashSet, VecDeque};
 
 type Edges = HashMap<Cave, Vec<Cave>>;
@@ -20,60 +19,38 @@ impl Cave {
     }
 }
 
-#[derive(Default, Clone, Debug)]
-struct Path {
-    visited: HashSet<Cave>,
-    breadcrumbs: Vec<Cave>,
+trait Visitor: Clone + Default {
+    fn visit(&mut self, cave: &Cave);
+    fn can_visit(&self, cave: &Cave) -> bool;
 }
 
-impl Path {
-    fn visit(&mut self, cave: &Cave) -> Result<()> {
-        if matches!(cave, Cave::Small(_)) {
-            if self.visited.contains(cave) {
-                return Err(anyhow!("already visited"));
-            }
+#[derive(Default, Clone)]
+struct Part1Visitor {
+    visited: HashSet<Cave>,
+}
 
+impl Visitor for Part1Visitor {
+    fn visit(&mut self, cave: &Cave) {
+        if matches!(cave, Cave::Small(_)) {
             self.visited.insert(cave.clone());
         }
-
-        self.breadcrumbs.push(cave.clone());
-        Ok(())
     }
 
-    fn connections(&self, connections: &Edges) -> Option<Vec<Cave>> {
-        let caves = connections.get(self.last()?)?;
-        Some(
-            caves
-                .iter()
-                .filter(|c| !self.visited.contains(c))
-                .cloned()
-                .collect(),
-        )
-    }
-
-    fn last(&self) -> Option<&'_ Cave> {
-        self.breadcrumbs.last()
+    fn can_visit(&self, cave: &Cave) -> bool {
+        !self.visited.contains(cave)
     }
 }
 
-#[derive(Default, Clone, Debug)]
-struct Path2 {
+#[derive(Default, Clone)]
+struct Part2Visitor {
     visited: HashMap<Cave, usize>,
-    breadcrumbs: Vec<Cave>,
 }
 
-impl Path2 {
-    pub fn visit(&mut self, cave: &Cave) -> Result<()> {
-        if !self.can_visit(cave) {
-            return Err(anyhow!("can not visit"));
-        }
-
+impl Visitor for Part2Visitor {
+    fn visit(&mut self, cave: &Cave) {
         if matches!(cave, Cave::Small(_)) {
             *self.visited.entry(cave.clone()).or_insert(0) += 1;
         }
-
-        self.breadcrumbs.push(cave.clone());
-        Ok(())
     }
 
     fn can_visit(&self, cave: &Cave) -> bool {
@@ -89,19 +66,44 @@ impl Path2 {
             Cave::Big(_) => true,
         }
     }
+}
 
-    pub fn connections(&self, connections: &Edges) -> Option<Vec<Cave>> {
+#[derive(Default, Clone)]
+struct Path<V: Visitor> {
+    visitor: V,
+    breadcrumbs: Vec<Cave>,
+}
+
+impl<V: Visitor> Path<V> {
+    pub fn new(visitor: V) -> Self {
+        Path{
+            visitor,
+            ..Default::default()
+        }
+    }
+
+    fn visit(&mut self, cave: &Cave) -> Result<()> {
+        if !self.visitor.can_visit(cave) {
+            return Err(anyhow!("can't visit"));
+        }
+
+        self.visitor.visit(cave);
+        self.breadcrumbs.push(cave.clone());
+        Ok(())
+    }
+
+    fn connections(&self, connections: &Edges) -> Option<Vec<Cave>> {
         let caves = connections.get(self.last()?)?;
         Some(
             caves
                 .iter()
-                .filter(|c| self.can_visit(c))
+                .filter(|c| self.visitor.can_visit(c))
                 .cloned()
                 .collect(),
         )
     }
 
-    pub fn last(&self) -> Option<&'_ Cave> {
+    fn last(&self) -> Option<&'_ Cave> {
         self.breadcrumbs.last()
     }
 }
@@ -125,14 +127,15 @@ fn parse_input(s: &str) -> Edges {
     })
 }
 
-fn part_one(s: &str) -> String {
+fn solve<V: Visitor>(s: &str) -> usize {
+    let start = Cave::Small("start".into());
     let end = Cave::Small("end".into());
     let edges = parse_input(s);
-    let mut queue: VecDeque<Path> = VecDeque::new();
+    let mut queue: VecDeque<Path<V>> = VecDeque::new();
 
     {
-        let mut p = Path::default();
-        p.visit(&Cave::Small("start".into()))
+        let mut p = Path::new(V::default());
+        p.visit(&start)
             .expect("unable to start");
         queue.push_front(p);
     }
@@ -158,47 +161,15 @@ fn part_one(s: &str) -> String {
         }
     }
 
-    let output = completed.len();
+    completed.len()
+}
 
-    format!("{}", output)
+fn part_one(s: &str) -> String {
+    format!("{}", solve::<Part1Visitor>(s))
 }
 
 fn part_two(s: &str) -> String {
-    let end = Cave::Small("end".into());
-    let edges = parse_input(s);
-    let mut queue: VecDeque<Path2> = VecDeque::new();
-
-    {
-        let mut p = Path2::default();
-        p.visit(&Cave::Small("start".into()))
-            .expect("unable to start");
-        queue.push_front(p);
-    }
-
-    let mut completed: Vec<HashSet<Cave>> = Vec::new();
-    while let Some(p) = queue.pop_front() {
-        if p.last() == Some(&end) {
-            completed.push(p.breadcrumbs.into_iter().collect());
-            continue;
-        }
-
-        let possible = if let Some(ps) = p.connections(&edges) {
-            ps
-        } else {
-            continue;
-        };
-
-        for connection in possible {
-            let mut next = p.clone();
-            if next.visit(&connection).is_ok() {
-                queue.push_front(next);
-            }
-        }
-    }
-
-    let output = completed.len();
-
-    format!("{}", output)
+    format!("{}", solve::<Part2Visitor>(s))
 }
 
 fn main() {
