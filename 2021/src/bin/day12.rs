@@ -56,6 +56,56 @@ impl Path {
     }
 }
 
+#[derive(Default, Clone, Debug)]
+struct Path2 {
+    visited: HashMap<Cave, usize>,
+    breadcrumbs: Vec<Cave>,
+}
+
+impl Path2 {
+    pub fn visit(&mut self, cave: &Cave) -> Result<()> {
+        if !self.can_visit(cave) {
+            return Err(anyhow!("can not visit"));
+        }
+
+        if matches!(cave, Cave::Small(_)) {
+            *self.visited.entry(cave.clone()).or_insert(0) += 1;
+        }
+
+        self.breadcrumbs.push(cave.clone());
+        Ok(())
+    }
+
+    fn can_visit(&self, cave: &Cave) -> bool {
+        match cave {
+            Cave::Small(c) if matches!(c.as_str(), "start" | "end") => {
+                !self.visited.contains_key(cave)
+            }
+            Cave::Small(_) => self
+                .visited
+                .get(cave)
+                .map(|_| self.visited.values().all(|&v| v < 2))
+                .unwrap_or(true),
+            Cave::Big(_) => true,
+        }
+    }
+
+    pub fn connections(&self, connections: &Edges) -> Option<Vec<Cave>> {
+        let caves = connections.get(self.last()?)?;
+        Some(
+            caves
+                .iter()
+                .filter(|c| self.can_visit(c))
+                .cloned()
+                .collect(),
+        )
+    }
+
+    pub fn last(&self) -> Option<&'_ Cave> {
+        self.breadcrumbs.last()
+    }
+}
+
 fn parse_input(s: &str) -> Edges {
     let connections = s.lines().map(|l| {
         let mut connection = l.split('-');
@@ -66,7 +116,10 @@ fn parse_input(s: &str) -> Edges {
     });
 
     connections.fold(Edges::new(), |mut edges, (a, b)| {
-        edges.entry(a.clone()).or_insert_with(Vec::new).push(b.clone());
+        edges
+            .entry(a.clone())
+            .or_insert_with(Vec::new)
+            .push(b.clone());
         edges.entry(b).or_insert_with(Vec::new).push(a);
         edges
     })
@@ -111,8 +164,39 @@ fn part_one(s: &str) -> String {
 }
 
 fn part_two(s: &str) -> String {
-    let _input = parse_input(s);
-    let output = 0;
+    let end = Cave::Small("end".into());
+    let edges = parse_input(s);
+    let mut queue: VecDeque<Path2> = VecDeque::new();
+
+    {
+        let mut p = Path2::default();
+        p.visit(&Cave::Small("start".into()))
+            .expect("unable to start");
+        queue.push_front(p);
+    }
+
+    let mut completed: Vec<HashSet<Cave>> = Vec::new();
+    while let Some(p) = queue.pop_front() {
+        if p.last() == Some(&end) {
+            completed.push(p.breadcrumbs.into_iter().collect());
+            continue;
+        }
+
+        let possible = if let Some(ps) = p.connections(&edges) {
+            ps
+        } else {
+            continue;
+        };
+
+        for connection in possible {
+            let mut next = p.clone();
+            if next.visit(&connection).is_ok() {
+                queue.push_front(next);
+            }
+        }
+    }
+
+    let output = completed.len();
 
     format!("{}", output)
 }
@@ -131,5 +215,7 @@ mod test {
     test_example!(example_12_1_1, part_one, 12, 1, 1);
     test_example!(example_12_1_2, part_one, 12, 1, 2);
     test_example!(example_12_1_3, part_one, 12, 1, 3);
-    test_example!(example_12_2_2, part_two, 12, 2, 1);
+    test_example!(example_12_2_1, part_two, 12, 2, 1);
+    test_example!(example_12_2_2, part_two, 12, 2, 2);
+    test_example!(example_12_2_3, part_two, 12, 2, 3);
 }
