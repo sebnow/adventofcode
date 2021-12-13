@@ -52,7 +52,13 @@ where
     }
 
     pub fn remove(&mut self, p: &Point) -> Option<T> {
-        self.coords.remove(p)
+        let c = self.coords.remove(p);
+
+        if c.is_some() {
+            self.reset_bounds()
+        }
+
+        c
     }
 
     pub fn get(&self, p: &Point) -> Option<&T> {
@@ -92,6 +98,19 @@ where
     pub fn surrounding(&self, p: &Point, mask: u8) -> Surrounding<T> {
         Surrounding::new(self, p, mask)
     }
+
+    fn reset_bounds(&mut self) {
+            let mut x_bounds = (0, 0);
+            let mut y_bounds = (0, 0);
+
+            for p in self.coords.keys() {
+                x_bounds = (x_bounds.0.min(p.x), x_bounds.1.max(p.x));
+                y_bounds = (y_bounds.0.min(p.y), y_bounds.1.max(p.y));
+            }
+
+            self.x_bounds = x_bounds;
+            self.y_bounds = y_bounds;
+        }
 }
 
 impl<T> std::fmt::Display for Grid<T>
@@ -104,7 +123,7 @@ where
                 if let Some(x) = self.coords.get(&Point::new(x as i64, y as i64)) {
                     write!(f, "{}", x)?;
                 } else {
-                    write!(f, " ")?;
+                    write!(f, "{}", T::default())?;
                 }
             }
 
