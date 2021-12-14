@@ -1,8 +1,46 @@
+use itertools::Itertools;
 use std::collections::HashMap;
+
+type Pair = (char, char);
 
 struct Input {
     template: String,
-    rules: HashMap<String, char>,
+    rules: HashMap<Pair, char>,
+}
+
+fn solve(s: &str, steps: usize) -> usize {
+    let input = parse_input(s);
+    let mut pairs: HashMap<Pair, usize> = HashMap::new();
+
+    pairs.insert((input.template.chars().last().unwrap(), '\0'), 1);
+    for pair in input.template.chars().tuple_windows() {
+        *pairs.entry(pair).or_default() += 1;
+    }
+
+    for _ in 1..=steps {
+        let ps = pairs.keys().copied().collect_vec();
+        let mut new_pairs = HashMap::with_capacity(pairs.len());
+
+        for p @ (a, b) in ps {
+            let count = *pairs.entry((a, b)).or_default();
+            if let Some(&c) = input.rules.get(&p) {
+                *new_pairs.entry((a, c)).or_default() += count;
+                *new_pairs.entry((c, b)).or_default() += count;
+            } else {
+                *new_pairs.entry((a, b)).or_default() += count;
+            };
+        }
+
+        pairs = new_pairs;
+    }
+
+    let mut counts: HashMap<char, usize> = HashMap::new();
+    for (&(a, _), count) in &pairs {
+        *counts.entry(a).or_default() += count;
+    }
+    let (min, max) = counts.into_values().minmax().into_option().unwrap();
+
+    max - min
 }
 
 fn parse_input(s: &str) -> Input {
@@ -13,11 +51,8 @@ fn parse_input(s: &str) -> Input {
         .unwrap()
         .lines()
         .map(|l| {
-            let mut parts = l.split(" -> ");
-            (
-                parts.next().unwrap().to_string(),
-                parts.next().unwrap().chars().next().unwrap(),
-            )
+            let mut cs = l.chars();
+            ((cs.next().unwrap(), cs.next().unwrap()), cs.nth(4).unwrap())
         })
         .collect();
 
@@ -25,43 +60,11 @@ fn parse_input(s: &str) -> Input {
 }
 
 fn part_one(s: &str) -> String {
-    let input = parse_input(s);
-    let mut polymer = input.template;
-    println!("Template:     {}", polymer);
-
-    for step in 1..=10 {
-        let mut i = 1;
-        while i < polymer.len() {
-            let pair = &polymer[i - 1..=i];
-
-            if let Some(&element) = input.rules.get(pair) {
-                polymer.insert(i, element);
-                i += 1
-            }
-
-            i += 1;
-        }
-        println!("After step {}: {}", step, polymer);
-    }
-
-    let mut counts: HashMap<char, usize> = HashMap::new();
-    for c in polymer.chars() {
-        *counts.entry(c).or_default() += 1;
-    }
-
-    let min = counts.iter().min_by_key(|(_, &count)| count).unwrap().1;
-    let max = counts.iter().max_by_key(|(_, &count)| count).unwrap().1;
-    let output = max - min;
-
-    format!("{}", output)
+    format!("{}", solve(s, 10))
 }
 
 fn part_two(s: &str) -> String {
-    let _input = parse_input(s);
-
-    let output = 0;
-
-    format!("{}", output)
+    format!("{}", solve(s, 40))
 }
 
 fn main() {
