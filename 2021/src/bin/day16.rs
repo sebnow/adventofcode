@@ -4,14 +4,35 @@ type Bit = u8;
 
 #[derive(Debug, PartialEq)]
 struct Packet {
-    version: u32,
-    kind: u32,
+    version: u64,
+    kind: u64,
     payload: PacketPayload,
+}
+
+impl Packet {
+    fn value(&self) -> u64 {
+        match &self.payload {
+            PacketPayload::Literal(v) => *v,
+            PacketPayload::Operation(ps) => {
+                let mut vs = ps.iter().map(|p| p.value());
+                match self.kind {
+                    0 => vs.sum(),
+                    1 => vs.product(),
+                    2 => vs.min().unwrap(),
+                    3 => vs.max().unwrap(),
+                    5 => (vs.next().unwrap() > vs.next().unwrap()) as u64,
+                    6 => (vs.next().unwrap() < vs.next().unwrap()) as u64,
+                    7 => (vs.next().unwrap() == vs.next().unwrap()) as u64,
+                    _ => panic!("invalid operation kind {}", self.kind),
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
 enum PacketPayload {
-    Literal(u32),
+    Literal(u64),
     Operation(Vec<Packet>),
 }
 
@@ -28,8 +49,8 @@ impl From<&Vec<Bit>> for Packet {
 }
 
 fn read_packet(bits: &[Bit]) -> (Packet, usize) {
-    let version = load_u32(&bits[0..3]);
-    let kind = load_u32(&bits[3..6]);
+    let version = load(&bits[0..3]);
+    let kind = load(&bits[3..6]);
     let mut bits_read = 6;
 
     let payload = if kind == 4 {
@@ -38,7 +59,7 @@ fn read_packet(bits: &[Bit]) -> (Packet, usize) {
         payload
     } else if bits[bits_read] == 0 {
         bits_read += 1;
-        let length = load_u32(&bits[bits_read..bits_read + 15]) as usize;
+        let length = load(&bits[bits_read..bits_read + 15]) as usize;
         bits_read += 15;
 
         let end = bits_read + length;
@@ -53,7 +74,7 @@ fn read_packet(bits: &[Bit]) -> (Packet, usize) {
         PacketPayload::Operation(sub_packets)
     } else {
         bits_read += 1;
-        let count = load_u32(&bits[bits_read..bits_read + 11]) as usize;
+        let count = load(&bits[bits_read..bits_read + 11]) as usize;
         bits_read += 11;
 
         let mut sub_packets = Vec::with_capacity(count);
@@ -82,7 +103,7 @@ fn parse_literal(bits: &[Bit]) -> (PacketPayload, usize) {
 
     loop {
         value <<= 4;
-        value += load_u32(&bits[offset + 1..offset + 5]);
+        value += load(&bits[offset + 1..offset + 5]);
         offset += 5;
 
         if bits[offset - 5] == 0 {
@@ -92,8 +113,8 @@ fn parse_literal(bits: &[Bit]) -> (PacketPayload, usize) {
     (PacketPayload::Literal(value), offset)
 }
 
-fn load_u32(bits: &[Bit]) -> u32 {
-    bits.iter().fold(0, |x, &b| b as u32 + (x << 1))
+fn load(bits: &[Bit]) -> u64 {
+    bits.iter().fold(0, |x, &b| b as u64 + (x << 1))
 }
 
 fn parse_bitvec(hex: &str) -> Vec<Bit> {
@@ -145,7 +166,7 @@ fn part_one(s: &str) -> String {
 fn part_two(s: &str) -> String {
     let input = parse_input(s);
 
-    let output = 0;
+    let output = input.value();
 
     format!("{}", output)
 }
@@ -165,7 +186,14 @@ mod test_day16 {
     test_example!(example_16_1_2, part_one, 16, 1, 2);
     test_example!(example_16_1_3, part_one, 16, 1, 3);
     test_example!(example_16_1_4, part_one, 16, 1, 4);
-    //test_example!(example_16_2_1, part_two, 16, 2, 1);
+    test_example!(example_16_2_1, part_two, 16, 2, 1);
+    test_example!(example_16_2_2, part_two, 16, 2, 2);
+    test_example!(example_16_2_3, part_two, 16, 2, 3);
+    test_example!(example_16_2_4, part_two, 16, 2, 4);
+    test_example!(example_16_2_5, part_two, 16, 2, 5);
+    test_example!(example_16_2_6, part_two, 16, 2, 6);
+    test_example!(example_16_2_7, part_two, 16, 2, 7);
+    test_example!(example_16_2_8, part_two, 16, 2, 8);
 
     #[test]
     fn parse_bitvec_from_hex() {
@@ -191,47 +219,53 @@ mod test_day16 {
     fn parse_packet() {
         assert_eq!(
             read_packet(&parse_bitvec("38006F45291200")),
-            (Packet {
-                version: 1,
-                kind: 6,
-                payload: PacketPayload::Operation(vec![
-                    Packet {
-                        version: 6,
-                        kind: 4,
-                        payload: PacketPayload::Literal(10),
-                    },
-                    Packet {
-                        version: 2,
-                        kind: 4,
-                        payload: PacketPayload::Literal(20),
-                    }
-                ]),
-            }, 49)
+            (
+                Packet {
+                    version: 1,
+                    kind: 6,
+                    payload: PacketPayload::Operation(vec![
+                        Packet {
+                            version: 6,
+                            kind: 4,
+                            payload: PacketPayload::Literal(10),
+                        },
+                        Packet {
+                            version: 2,
+                            kind: 4,
+                            payload: PacketPayload::Literal(20),
+                        }
+                    ]),
+                },
+                49
+            )
         );
 
         assert_eq!(
             read_packet(&parse_bitvec("EE00D40C823060")),
-            (Packet {
-                version: 7,
-                kind: 3,
-                payload: PacketPayload::Operation(vec![
-                    Packet {
-                        version: 2,
-                        kind: 4,
-                        payload: PacketPayload::Literal(1),
-                    },
-                    Packet {
-                        version: 4,
-                        kind: 4,
-                        payload: PacketPayload::Literal(2),
-                    },
-                    Packet {
-                        version: 1,
-                        kind: 4,
-                        payload: PacketPayload::Literal(3),
-                    }
-                ]),
-            }, 51)
+            (
+                Packet {
+                    version: 7,
+                    kind: 3,
+                    payload: PacketPayload::Operation(vec![
+                        Packet {
+                            version: 2,
+                            kind: 4,
+                            payload: PacketPayload::Literal(1),
+                        },
+                        Packet {
+                            version: 4,
+                            kind: 4,
+                            payload: PacketPayload::Literal(2),
+                        },
+                        Packet {
+                            version: 1,
+                            kind: 4,
+                            payload: PacketPayload::Literal(3),
+                        }
+                    ]),
+                },
+                51
+            )
         );
     }
 }
