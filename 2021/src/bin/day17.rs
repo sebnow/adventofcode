@@ -1,4 +1,5 @@
 use aocutil::{Point, Vector};
+use std::ops::Neg;
 
 type Box = euclid::Box2D<i64, euclid::UnknownUnit>;
 
@@ -10,7 +11,10 @@ struct Probe {
 
 impl Probe {
     fn step(&self) -> Self {
-        let dravity = Vector::new(if self.velocity.x > 0 { -1 } else { 1 }, -1);
+        let drag = 0.cmp(&self.velocity.x) as i64;
+        let gravity = -1;
+        let dravity = Vector::new(drag, gravity);
+
         Probe {
             velocity: self.velocity + dravity,
             position: self.position + self.velocity,
@@ -43,29 +47,28 @@ fn get_trajectory(velocity: &Vector, target: &Box) -> Option<Vec<Probe>> {
     let mut path: Vec<Probe> = vec![];
 
     loop {
-        if probe.position.x > target.max.x {
-            return None;
+        probe = probe.step();
+        path.push(probe.clone());
+
+        if target.min.x <= probe.position.x && probe.position.x <= target.max.x && target.min.y <= probe.position.y && probe.position.y <= target.max.y {
+            return Some(path);
+        }
+
+        if probe.position.x < target.min.x && probe.velocity.x < 1 {
+            return None
         }
         if probe.position.x > target.max.x || probe.position.y < target.min.y {
             return None;
         }
-
-        path.push(probe.clone());
-
-        if target.contains(probe.position) {
-            return Some(path);
-        }
-
-        probe = probe.step()
     }
 }
 
 fn find_velocity(target: &Box) -> Vec<(Vector, Vec<Probe>)> {
     let mut vs = vec![];
 
-    let search_space = 100;
+    let search_space: i64 = 500;
     for x in 1..search_space {
-        for y in 1..search_space {
+        for y in search_space.neg()..search_space {
             let v = Vector::new(x, y);
             match get_trajectory(&v, target) {
                 Some(p) => vs.push((v, p)),
@@ -92,7 +95,9 @@ fn part_one(s: &str) -> String {
 
 fn part_two(s: &str) -> String {
     let input = parse_input(s);
-    let output = 0;
+    let possible = find_velocity(&input);
+
+    let output = possible.len();
 
     format!("{}", output)
 }
