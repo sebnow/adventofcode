@@ -287,9 +287,19 @@ fn part_one(s: &str) -> String {
 }
 
 fn part_two(s: &str) -> String {
-    let input = parse_input(s);
+    let input: Vec<Node> = parse_input(s).collect();
 
-    let output = 0;
+    let mut output = 0;
+    for a in &input {
+        for b in &input {
+            if a == b {
+                continue
+            }
+
+            output = output.max((a.to_owned() + b.to_owned()).magnitude());
+        }
+    }
+
     format!("{}", output)
 }
 
