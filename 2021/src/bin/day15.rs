@@ -3,26 +3,19 @@ use std::{
     collections::{BinaryHeap, HashMap},
 };
 
-const SURROUNDING: [(i64, i64);4] = [(0, 1), (1, 0), (-1, 0), (0, -1)];
+use itertools::Itertools;
+
+const SURROUNDING: [(i64, i64); 4] = [(0, 1), (1, 0), (-1, 0), (0, -1)];
 
 type Risk = u32;
 type Point = (i64, i64);
 type Grid = HashMap<Point, Risk>;
 
-fn parse_input(s: &str) -> Grid {
-    s
-        .lines()
-        .enumerate()
-        .flat_map(|(y, l)| l.chars().enumerate().map(move |(x, c)| ((x as i64, y as i64), c.to_digit(10).unwrap())))
-        .collect()
-}
-
-fn part_one(s: &str) -> String {
-    let grid = parse_input(s);
+fn find_lowest_risk(grid: &Grid) -> u32 {
     let mut cell_risk = HashMap::new();
 
     let mut queue = BinaryHeap::from([(Reverse(0), (0, 0))]);
-    while let Some((Reverse(total_risk), p@(x, y))) = queue.pop() {
+    while let Some((Reverse(total_risk), p @ (x, y))) = queue.pop() {
         let risk = cell_risk.entry(p).or_insert(u32::MAX);
 
         if total_risk < *risk {
@@ -39,15 +32,42 @@ fn part_one(s: &str) -> String {
     }
 
     let bottom_right = cell_risk.keys().max().unwrap();
-    let output = cell_risk[bottom_right];
+    cell_risk[bottom_right]
+}
+fn parse_input(s: &str) -> Grid {
+    s.lines()
+        .enumerate()
+        .flat_map(|(y, l)| {
+            l.chars()
+                .enumerate()
+                .map(move |(x, c)| ((x as i64, y as i64), c.to_digit(10).unwrap()))
+        })
+        .collect()
+}
+
+fn part_one(s: &str) -> String {
+    let grid = parse_input(s);
+    let output = find_lowest_risk(&grid);
 
     format!("{}", output)
 }
 
 fn part_two(s: &str) -> String {
-    let input = parse_input(s);
+    let grid = parse_input(s);
+    let (width, height) = grid.keys().max().map(|(x, y)| (x + 1, y + 1)).unwrap();
+    let grid = grid
+        .into_iter()
+        .flat_map(|((x, y), r)| {
+            (0..5).cartesian_product(0..5).map(move |(mx, my)| {
+                (
+                    (x + mx * width, y + my * height),
+                    (r + mx as Risk + my as Risk - 1) % 9 + 1,
+                )
+            })
+        })
+        .collect();
 
-    let output = 0;
+    let output = find_lowest_risk(&grid);
 
     format!("{}", output)
 }
@@ -59,10 +79,10 @@ fn main() {
 }
 
 #[cfg(test)]
-mod test {
+mod test_day15 {
     use super::*;
     use aocutil::test_example;
 
-    test_example!(example_15_1, part_one, 15, 1, 1);
-    test_example!(example_15_2, part_two, 15, 2, 1);
+    test_example!(example_15_1_1, part_one, 15, 1, 1);
+    test_example!(example_15_2_1, part_two, 15, 2, 1);
 }
