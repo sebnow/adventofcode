@@ -1,49 +1,5 @@
 use anyhow::{anyhow, Result};
-use rand::Rng;
 use std::str::FromStr;
-
-const LEFT_WIDTH: usize = 60;
-const INDENT: &str = "| ";
-
-fn debug<D: std::fmt::Display>(depth: usize, d: &D, msg: &str) {
-    if true {return}
-    println!(
-        "{0:1$} | {2}",
-        format!("{}{}", INDENT.repeat(depth), msg),
-        LEFT_WIDTH,
-        d
-    );
-}
-
-fn graph(n: &Node) -> String {
-    format!("digraph G {{\n{}\n}}", graph_node(n).1)
-}
-
-fn graph_node(n: &Node) -> (String, String) {
-    let mut rng = rand::thread_rng();
-    let n_id = format!("n{}", rng.gen::<usize>());
-
-    let (left_id, left_output) = graph_leaf(&n.left);
-    let (right_id, right_output) = graph_leaf(&n.right);
-    let output = format!(
-        "  {}[label = \"\"]\n  {} -> {}\n  {} -> {}\n{}\n{}",
-        n_id, n_id, left_id, n_id, right_id, left_output, right_output,
-    );
-
-    (n_id, output)
-}
-
-fn graph_leaf(l: &Leaf) -> (String, String) {
-    let mut rng = rand::thread_rng();
-    match l {
-        Leaf::Value(v) => {
-            let v_id = format!("v{}", rng.gen::<usize>());
-            let output = format!("  {}[label = \"{}\"]", v_id, v);
-            (v_id, output)
-        }
-        Leaf::Child(n) => graph_node(n),
-    }
-}
 
 type Num = i64;
 
@@ -70,10 +26,7 @@ impl Node {
     }
 
     fn reduce_rec(&mut self, depth: usize) -> Option<()> {
-        while self.explode_rec(depth).is_some() || self.split_rec().is_some() {
-            debug(depth, &self, "Reducing");
-        }
-        debug(depth, &self, "Reduced");
+        while self.explode_rec(depth).is_some() || self.split_rec().is_some() {}
         Some(())
     }
 
@@ -81,16 +34,9 @@ impl Node {
         self.left.split_rec().or_else(|| self.right.split_rec())
     }
 
-    pub fn explode(&self, depth: usize) -> Option<Self> {
-        let mut n = self.clone();
-        n.explode_rec(depth).map(|(_, _)| n)
-    }
-
     fn explode_rec(&mut self, depth: usize) -> Option<(bool, (Num, Num))> {
-        debug(depth, &self, "Exploding");
         if depth >= 4 {
             if let (Leaf::Value(a), Leaf::Value(b)) = (&self.left, &self.right) {
-                debug(depth, &self, "Bang!");
                 // FIXME Pointless clone
                 return Some((true, (*a, *b)));
             }
@@ -108,7 +54,6 @@ impl Node {
                     Leaf::Child(n) => adj = &mut n.left,
                     Leaf::Value(v) => {
                         *v += r_rem;
-                        debug(depth, &self, "Added right value to right adjacent");
                         return Some((false, (l_rem, 0)));
                     }
                 }
@@ -127,7 +72,6 @@ impl Node {
                     Leaf::Child(n) => adj = &mut n.right,
                     Leaf::Value(v) => {
                         *v += l_rem;
-                        debug(depth, &self, "Added left value to left adjacent");
                         return Some((false, (0, r_rem)));
                     }
                 }
@@ -206,11 +150,6 @@ impl Leaf {
             Leaf::Value(v) => *v,
             Leaf::Child(n) => n.magnitude(),
         }
-    }
-
-    pub fn split(&self) -> Option<Self> {
-        let mut l = self.clone();
-        l.split_rec().map(|_| l)
     }
 
     fn split_rec(&mut self) -> Option<()> {
@@ -293,7 +232,7 @@ fn part_two(s: &str) -> String {
     for a in &input {
         for b in &input {
             if a == b {
-                continue
+                continue;
             }
 
             output = output.max((a.to_owned() + b.to_owned()).magnitude());
@@ -382,8 +321,10 @@ mod test_day18 {
     #[test]
     fn split() {
         let assert_split = |value, expected| {
+            let mut l = Leaf::from_str(value).unwrap();
+            l.split_rec();
             assert_eq!(
-                Leaf::from_str(value).unwrap().split().unwrap().to_string(),
+                l.to_string(),
                 expected
             )
         };
@@ -412,14 +353,9 @@ mod test_day18 {
     #[test]
     fn explode() {
         let assert_exploded = |node, expected| {
-            let n = Node::from_str(node).unwrap();
-            println!("{:width$} => {}", node, expected, width = LEFT_WIDTH);
-            assert_eq!(
-                n.explode(0).unwrap().to_string(),
-                expected,
-                "\n{}",
-                graph(&n)
-            );
+            let mut n = Node::from_str(node).unwrap();
+            n.explode_rec(0);
+            assert_eq!(n.to_string(), expected);
             println!("\n");
         };
 
@@ -440,8 +376,7 @@ mod test_day18 {
     fn reduce() {
         let assert_reduced = |node, expected| {
             let n = Node::from_str(node).unwrap();
-            println!("{:width$} => {}", node, expected, width = LEFT_WIDTH);
-            assert_eq!(n.reduce().unwrap().to_string(), expected, "\n{}", graph(&n));
+            assert_eq!(n.reduce().unwrap().to_string(), expected);
             println!("\n");
         };
 
