@@ -83,10 +83,17 @@ fn parse_input(s: &str) -> (Vec<Cell>, Grid) {
 
 fn part_one(s: &str) -> String {
     let (algo, mut grid) = parse_input(s);
-
     println!("{}\n", grid);
     for i in 0..2 {
-        grid = enhance(&grid, &algo, if i % 2 == 0 {Cell::Dark} else {Cell::Light});
+        grid = enhance(
+            &grid,
+            &algo,
+            if algo[0] == Cell::Light && i % 2 == 0 {
+                Cell::Dark
+            } else {
+                Cell::Light
+            },
+        );
         println!("{}\n", grid);
     }
 
@@ -96,8 +103,21 @@ fn part_one(s: &str) -> String {
 }
 
 fn part_two(s: &str) -> String {
-    let input = parse_input(s);
-    let output = 0;
+    let (algo, mut grid) = parse_input(s);
+    for i in 0..50 {
+        grid = enhance(
+            &grid,
+            &algo,
+            if algo[0] == Cell::Light && i % 2 == 0 {
+                Cell::Dark
+            } else {
+                Cell::Light
+            },
+        );
+    }
+
+    let output = grid.iter().filter(|(_, &c)| c == Cell::Light).count();
+
     format!("{}", output)
 }
 
@@ -118,10 +138,25 @@ mod test_day20 {
     #[test]
     fn example_20_1_binary() {
         let grid: Grid = "...\n#..\n.#.".parse().unwrap();
-        assert_eq!(surrounding_to_decimal(&grid, &Point::new(0, 0), Default::default()), 2);
-        assert_eq!(surrounding_to_decimal(&grid, &Point::new(2, 0), Default::default()), 0);
-        assert_eq!(surrounding_to_decimal(&grid, &Point::new(1, -1), Default::default()), 34);
-        assert_eq!(surrounding_to_decimal(&grid, &Point::new(0, -2), Default::default()), 136);
-        assert_eq!(surrounding_to_decimal(&grid, &Point::new(2, -2), Default::default()), 32);
+        assert_eq!(
+            surrounding_to_decimal(&grid, &Point::new(0, 0), Default::default()),
+            2
+        );
+        assert_eq!(
+            surrounding_to_decimal(&grid, &Point::new(2, 0), Default::default()),
+            0
+        );
+        assert_eq!(
+            surrounding_to_decimal(&grid, &Point::new(1, -1), Default::default()),
+            34
+        );
+        assert_eq!(
+            surrounding_to_decimal(&grid, &Point::new(0, -2), Default::default()),
+            136
+        );
+        assert_eq!(
+            surrounding_to_decimal(&grid, &Point::new(2, -2), Default::default()),
+            32
+        );
     }
 }
