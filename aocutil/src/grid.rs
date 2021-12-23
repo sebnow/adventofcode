@@ -1,16 +1,18 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::iter;
 use std::iter::FromIterator;
-
-pub trait Collision {
-    fn is_collidable(&self) -> bool;
-}
 
 pub type Point = euclid::Point2D<i64, euclid::UnknownUnit>;
 pub type Vector = euclid::Vector2D<i64, euclid::UnknownUnit>;
 
 pub const MASK_CROSSHAIR: u8 = 0b01011010;
 pub const MASK_ALL: u8 = 0b11111111;
+
+pub trait Pathfindable {
+    fn collides_with(&self, other: &Self) -> bool;
+    fn traverse_cost(&self) -> i64;
+    fn direction_mask(&self) -> u8;
+}
 
 #[derive(Default, Debug, PartialEq, Clone)]
 pub struct Grid<T> {
@@ -100,17 +102,17 @@ where
     }
 
     fn reset_bounds(&mut self) {
-            let mut x_bounds = (0, 0);
-            let mut y_bounds = (0, 0);
+        let mut x_bounds = (0, 0);
+        let mut y_bounds = (0, 0);
 
-            for p in self.coords.keys() {
-                x_bounds = (x_bounds.0.min(p.x), x_bounds.1.max(p.x));
-                y_bounds = (y_bounds.0.min(p.y), y_bounds.1.max(p.y));
-            }
-
-            self.x_bounds = x_bounds;
-            self.y_bounds = y_bounds;
+        for p in self.coords.keys() {
+            x_bounds = (x_bounds.0.min(p.x), x_bounds.1.max(p.x));
+            y_bounds = (y_bounds.0.min(p.y), y_bounds.1.max(p.y));
         }
+
+        self.x_bounds = x_bounds;
+        self.y_bounds = y_bounds;
+    }
 }
 
 impl<T> std::fmt::Display for Grid<T>
@@ -135,6 +137,45 @@ where
     }
 }
 
+impl<T> Grid<T>
+where
+    T: Pathfindable + Copy + PartialEq,
+{
+    pub fn shortest_path(&self, from: &Point, to: &Point) -> Vec<Point> {
+        let mask = self.get(to).unwrap().direction_mask();
+        let mut visited: VecDeque<(Point, usize)> = VecDeque::new();
+        visited.push_back((*to, 0));
+
+        while let Some((p, cost)) = visited.pop_front() {
+            let cell = self.get(&p).unwrap();
+            let next: Vec<_> = self
+                .surrounding(&p, mask)
+                .filter(|(_, other)| !cell.collides_with(other))
+                .map(|(p, _)| (p, cost + 1))
+                .collect();
+
+            visited.extend(&next);
+
+            if next.iter().any(|(p, _)| p == from) {
+                break;
+            }
+        }
+
+        let cost_map: Grid<usize> = visited.into_iter().collect();
+        let mut p = *from;
+        let mut path = vec![p];
+        while &p != to {
+            p = cost_map
+                .surrounding(&p, mask)
+                .min_by_key(|(_, &c)| c)
+                .unwrap().0;
+            path.push(p);
+        }
+
+        path
+    }
+}
+
 impl<T> FromIterator<(Point, T)> for Grid<T>
 where
     T: PartialEq + std::marker::Copy,
@@ -143,6 +184,24 @@ where
         let mut g = Grid::new();
         g.extend(iter);
         g
+    }
+}
+
+impl<T> std::str::FromStr for Grid<T>
+where
+    T: From<char> + PartialEq + std::marker::Copy,
+{
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(s.lines()
+            .enumerate()
+            .flat_map(move |(y, l)| {
+                l.chars()
+                    .enumerate()
+                    .map(move |(x, c)| (Point::new(x as i64, 0 - y as i64), c.into()))
+            })
+            .collect())
     }
 }
 
@@ -218,15 +277,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[derive(Clone, Copy, Default, PartialEq)]
-    struct Collidable<T>(T, bool);
-
-    impl<T> Collision for Collidable<T> {
-        fn is_collidable(&self) -> bool {
-            self.1
-        }
-    }
 
     #[test]
     fn display_coords() {
