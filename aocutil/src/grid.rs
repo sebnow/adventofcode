@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::iter;
 use std::iter::FromIterator;
 
+use euclid::Box2D;
+
 pub trait Collision {
     fn is_collidable(&self) -> bool;
 }
@@ -85,6 +87,13 @@ where
         self.coords.len()
     }
 
+    pub fn bounds(&self) -> Box2D<i64, euclid::UnknownUnit> {
+        Box2D::new(
+            Point::new(self.x_bounds.0, self.y_bounds.0),
+            Point::new(self.x_bounds.1, self.y_bounds.1),
+        )
+    }
+
     /// Return cells surrounding `p` according to `mask`. The `mask` bit positions map to cells in
     /// row-major order starting with the most significant bit, omitting the middle point `p`.
     ///
@@ -100,17 +109,17 @@ where
     }
 
     fn reset_bounds(&mut self) {
-            let mut x_bounds = (0, 0);
-            let mut y_bounds = (0, 0);
+        let mut x_bounds = (0, 0);
+        let mut y_bounds = (0, 0);
 
-            for p in self.coords.keys() {
-                x_bounds = (x_bounds.0.min(p.x), x_bounds.1.max(p.x));
-                y_bounds = (y_bounds.0.min(p.y), y_bounds.1.max(p.y));
-            }
-
-            self.x_bounds = x_bounds;
-            self.y_bounds = y_bounds;
+        for p in self.coords.keys() {
+            x_bounds = (x_bounds.0.min(p.x), x_bounds.1.max(p.x));
+            y_bounds = (y_bounds.0.min(p.y), y_bounds.1.max(p.y));
         }
+
+        self.x_bounds = x_bounds;
+        self.y_bounds = y_bounds;
+    }
 }
 
 impl<T> std::fmt::Display for Grid<T>
@@ -143,6 +152,24 @@ where
         let mut g = Grid::new();
         g.extend(iter);
         g
+    }
+}
+
+impl<T> std::str::FromStr for Grid<T>
+where
+    T: From<char> + PartialEq + std::marker::Copy,
+{
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(s.lines()
+            .enumerate()
+            .flat_map(move |(y, l)| {
+                l.chars()
+                    .enumerate()
+                    .map(move |(x, c)| (Point::new(x as i64, 0 - y as i64), c.into()))
+            })
+            .collect())
     }
 }
 
