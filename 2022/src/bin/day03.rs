@@ -1,6 +1,7 @@
 use anyhow::Result;
-  
-type Rucksack = (Vec<char>, Vec<char>);
+use itertools::Itertools;
+
+type Rucksack = Vec<char>;
 
 fn priority(c: char) -> u32 {
     if c.is_lowercase() {
@@ -11,19 +12,12 @@ fn priority(c: char) -> u32 {
 }
 
 fn appears_in_both(r: &Rucksack) -> char {
-    *r.0.iter().find(|&c| r.1.contains(c)).unwrap()
+    let (a, b) = r.split_at(r.len() / 2);
+    *a.iter().find(|&c| b.contains(c)).unwrap()
 }
 
 fn parse_input(s: &str) -> Result<Vec<Rucksack>> {
-    let all: Vec<Vec<char>> = s.lines().map(|l| l.chars().collect()).collect();
-
-    Ok(all
-        .iter()
-        .map(|r| {
-            let (a, b) = r.split_at(r.len() / 2);
-            (a.into(), b.into())
-        })
-        .collect())
+    Ok(s.lines().map(|l| l.chars().collect()).collect())
 }
 
 fn part_one(s: &str) -> String {
@@ -40,7 +34,20 @@ fn part_one(s: &str) -> String {
 fn part_two(s: &str) -> String {
     let input = parse_input(s).unwrap();
 
-    "".to_string()
+    input
+        .iter()
+        .chunks(3)
+        .into_iter()
+        .map(|group| {
+            let group: Vec<&Rucksack> = group.collect();
+            *group[0]
+                .iter()
+                .find(|c| group[1..].iter().all(|o| o.contains(c)))
+                .unwrap()
+        })
+        .map(priority)
+        .sum::<u32>()
+        .to_string()
 }
 
 fn main() -> Result<()> {
@@ -57,5 +64,5 @@ mod test {
     use aocutil::test_example;
 
     test_example!(example_3_1, part_one, 3, 1, 1);
-    //test_example!(example_2_2, part_two, 2, 2, 1);
+    test_example!(example_3_2, part_two, 3, 2, 1);
 }
