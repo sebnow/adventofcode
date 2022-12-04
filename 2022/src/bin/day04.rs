@@ -24,6 +24,14 @@ fn parse_input(s: &str) -> Result<Vec<Pair>> {
         .collect())
 }
 
+fn intersects(r1: &Range, r2: &Range) -> bool {
+    (r2.0 <= r1.0 && r1.0 <= r2.1) || (r2.0 <= r1.1 && r1.1 <= r2.1)
+}
+
+fn pair_intersects(pair: &Pair) -> bool {
+    intersects(&pair[0], &pair[1]) || intersects(&pair[1], &pair[0])
+}
+
 fn overlaps(r1: &Range, r2: &Range) -> bool {
     r1.0 <= r2.0 && r1.1 >= r2.1
 }
@@ -45,7 +53,11 @@ fn part_one(s: &str) -> String {
 fn part_two(s: &str) -> String {
     let input = parse_input(s).unwrap();
 
-    "".to_string()
+    input
+        .into_iter()
+        .filter(pair_intersects)
+        .count()
+        .to_string()
 }
 
 fn main() -> Result<()> {
@@ -62,5 +74,5 @@ mod test {
     use aocutil::test_example;
 
     test_example!(example_4_1, part_one, 4, 1, 1);
-    //test_example!(example_4_2, part_two, 4, 2, 1);
+    test_example!(example_4_2, part_two, 4, 2, 1);
 }
