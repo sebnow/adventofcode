@@ -73,7 +73,15 @@ fn part_one(s: &str) -> String {
 
 fn part_two(s: &str) -> String {
     let input = parse_input(s).unwrap();
-    "".to_string()
+    let (mut stacks, instructions) = input;
+
+    for instruction in &instructions {
+        let stack = stacks.get_mut(instruction.from - 1).unwrap();
+        let crates = stack.split_off(stack.len() - instruction.count);
+        stacks[instruction.to - 1].extend(crates);
+    }
+
+    stacks.iter().map(|s| s[s.len() - 1].0).collect()
 }
 
 fn main() -> Result<()> {
@@ -90,5 +98,5 @@ mod test {
     use aocutil::test_example;
 
     test_example!(example_5_1, part_one, 5, 1, 1);
-    //test_example!(example_5_2, part_two, 5, 2, 1);
+    test_example!(example_5_2, part_two, 5, 2, 1);
 }
