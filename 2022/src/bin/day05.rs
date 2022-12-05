@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use itertools::Itertools;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Crate(char);
 
 #[derive(Debug)]
@@ -21,12 +21,12 @@ fn parse_input(s: &str) -> Result<(Vec<Vec<Crate>>, Vec<MoveInstruction>)> {
         let mut stack_idx = 0;
 
         for mut chunk in &line.chars().chunks(4) {
-            if stacks.len() < stack_idx + 1 {
-                stacks.push(Vec::new());
-            }
-
             match chunk.next() {
                 Some('[') => {
+                    if stacks.len() < stack_idx + 1 {
+                        stacks.resize(stack_idx + 1, Vec::new());
+                    }
+
                     stacks[stack_idx].insert(0, Crate(chunk.next().unwrap()));
                     stack_idx += 1;
                 }
