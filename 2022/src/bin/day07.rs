@@ -3,28 +3,15 @@ use std::collections::VecDeque;
 
 #[derive(Debug)]
 enum Inode {
-    File(File),
-    Dir(Dir),
-}
-
-#[derive(Debug)]
-struct File {
-    name: String,
-    size: u64,
-}
-
-#[derive(Debug)]
-struct Dir {
-    name: String,
-    inums: Vec<usize>,
+    File { name: String, size: u64 },
+    Dir { name: String, inums: Vec<usize> },
 }
 
 impl Inode {
     fn total_size(&self, ilist: &[Inode]) -> u64 {
         match self {
-            Inode::File(f) => f.size,
-            Inode::Dir(d) => d
-                .inums
+            Inode::File { size, .. } => *size,
+            Inode::Dir { inums, .. } => inums
                 .iter()
                 .map(|&inum| ilist[inum].total_size(ilist))
                 .sum(),
@@ -33,8 +20,8 @@ impl Inode {
 
     fn name(&self) -> &str {
         match self {
-            Inode::File(f) => &f.name,
-            Inode::Dir(d) => &d.name,
+            Inode::File { name, .. } => name,
+            Inode::Dir { name, .. } => name,
         }
     }
 }
@@ -44,10 +31,10 @@ fn parse_input(input: &str) -> Result<Vec<Inode>> {
     let mut path = VecDeque::new();
     let mut in_ls = false;
 
-    ilist.push(Inode::Dir(Dir {
+    ilist.push(Inode::Dir {
         name: "".to_string(),
         inums: vec![],
-    }));
+    });
 
     for line in input.lines() {
         let words: Vec<&str> = line.split(' ').collect();
@@ -69,10 +56,9 @@ fn parse_input(input: &str) -> Result<Vec<Inode>> {
                     .with_context(|| "current working directory is not set")?;
 
                 match &ilist[*dir_inum] {
-                    Inode::File(_) => return Err(anyhow!("expected directory but found file")),
-                    Inode::Dir(d) => {
-                        let inum = d
-                            .inums
+                    Inode::File { .. } => return Err(anyhow!("expected directory but found file")),
+                    Inode::Dir { inums, .. } => {
+                        let inum = inums
                             .iter()
                             .find(|&inum| ilist[*inum].name() == dirname)
                             .with_context(|| "finding child directory")?;
@@ -89,15 +75,15 @@ fn parse_input(input: &str) -> Result<Vec<Inode>> {
                     .front()
                     .with_context(|| "listing while not in a directory")?;
                 let inode = if size.as_bytes()[0] < b'a' {
-                    Inode::File(File {
+                    Inode::File {
                         name: name.to_string(),
                         size: size.parse().with_context(|| "malformed file size")?,
-                    })
+                    }
                 } else {
-                    Inode::Dir(Dir {
+                    Inode::Dir {
                         name: name.to_string(),
                         inums: vec![],
-                    })
+                    }
                 };
 
                 ilist.push(inode);
@@ -105,8 +91,8 @@ fn parse_input(input: &str) -> Result<Vec<Inode>> {
                 let parent = &mut ilist[*parent_inum];
 
                 match parent {
-                    Inode::Dir(dir) => dir.inums.push(inum),
-                    Inode::File(_) => return Err(anyhow!("expected directory but found file")),
+                    Inode::Dir { inums, .. } => inums.push(inum),
+                    Inode::File { .. } => return Err(anyhow!("expected directory but found file")),
                 }
             }
             _ => return Err(anyhow!("unexpected case: {}", line)),
@@ -123,7 +109,7 @@ fn part_one(s: &str) -> String {
     ilist
         .iter()
         .filter_map(|inode| match inode {
-            Inode::File(_) => None,
+            Inode::File { .. } => None,
             _ => {
                 let total_size = inode.total_size(&ilist);
                 if total_size <= 100_000 {
@@ -151,7 +137,7 @@ fn part_two(s: &str) -> String {
         .iter()
         .map(|inode| (inode, inode.total_size(&ilist)))
         .filter(|&(inode, size)| match inode {
-            Inode::File(_) => false,
+            Inode::File { .. } => false,
             _ => size >= space_to_delete,
         })
         .min_by(|(_, a), (_, b)| a.cmp(b))
