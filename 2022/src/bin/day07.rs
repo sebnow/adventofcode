@@ -110,15 +110,9 @@ fn part_one(s: &str) -> String {
         .iter()
         .filter_map(|inode| match inode {
             Inode::File { .. } => None,
-            _ => {
-                let total_size = inode.total_size(&ilist);
-                if total_size <= 100_000 {
-                    Some(total_size)
-                } else {
-                    None
-                }
-            }
+            _ => Some(inode.total_size(&ilist)),
         })
+        .filter(|&size| size <= 100_000)
         .sum::<u64>()
         .to_string()
 }
