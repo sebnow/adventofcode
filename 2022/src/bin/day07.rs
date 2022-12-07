@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use std::collections::VecDeque;
 
 #[derive(Debug)]
@@ -64,17 +64,18 @@ fn parse_input(input: &str) -> Result<Vec<Inode>> {
             (_, "$", "cd") => {
                 in_ls = false;
                 let dirname = words[2..].join(" ");
-                let dir_inum = path.front().unwrap();
+                let dir_inum = path
+                    .front()
+                    .with_context(|| "current working directory is not set")?;
 
                 match &ilist[*dir_inum] {
-                    Inode::File(_) => panic!("expected directory but found file"),
+                    Inode::File(_) => return Err(anyhow!("expected directory but found file")),
                     Inode::Dir(d) => {
                         let inum = d
                             .inums
                             .iter()
                             .find(|&inum| ilist[*inum].name() == dirname)
-                            .with_context(|| "finding child directory")
-                            .unwrap();
+                            .with_context(|| "finding child directory")?;
 
                         path.push_front(*inum);
                     }
@@ -83,35 +84,32 @@ fn parse_input(input: &str) -> Result<Vec<Inode>> {
             (_, "$", "ls") => {
                 in_ls = true;
             }
-            (true, size, name) if size.as_bytes()[0] < b'a' => {
-                let parent_inum = path.front().unwrap();
-                ilist.push(Inode::File(File {
-                    name: name.to_string(),
-                    size: size.parse().unwrap(),
-                }));
-                let file_inum = ilist.len() - 1;
+            (true, size, name) => {
+                let parent_inum = path
+                    .front()
+                    .with_context(|| "listing while not in a directory")?;
+                let inode = if size.as_bytes()[0] < b'a' {
+                    Inode::File(File {
+                        name: name.to_string(),
+                        size: size.parse().with_context(|| "malformed file size")?,
+                    })
+                } else {
+                    Inode::Dir(Dir {
+                        name: name.to_string(),
+                        inums: vec![],
+                    })
+                };
+
+                ilist.push(inode);
+                let inum = ilist.len() - 1;
                 let parent = &mut ilist[*parent_inum];
 
                 match parent {
-                    Inode::Dir(dir) => dir.inums.push(file_inum),
-                    Inode::File(_) => panic!("expected directory but found file"),
+                    Inode::Dir(dir) => dir.inums.push(inum),
+                    Inode::File(_) => return Err(anyhow!("expected directory but found file")),
                 }
             }
-            (true, "dir", name) => {
-                let parent_inum = path.front().unwrap();
-                ilist.push(Inode::Dir(Dir {
-                    name: name.to_string(),
-                    inums: vec![],
-                }));
-                let dir_inum = ilist.len() - 1;
-                let parent = &mut ilist[*parent_inum];
-
-                match parent {
-                    Inode::Dir(dir) => dir.inums.push(dir_inum),
-                    Inode::File(_) => panic!("expected directory but found file"),
-                }
-            }
-            _ => panic!("unexpected case: {}", line),
+            _ => return Err(anyhow!("unexpected case: {}", line)),
         }
     }
 
