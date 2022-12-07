@@ -39,13 +39,7 @@ impl Inode {
     }
 }
 
-fn parse_input(s: &str) -> Result<Vec<&str>> {
-    Ok(s.lines().collect())
-}
-
-fn part_one(s: &str) -> String {
-    let input = parse_input(s).unwrap();
-
+fn parse_input(input: &str) -> Result<Vec<Inode>> {
     let mut ilist = Vec::new();
     let mut path = VecDeque::new();
     let mut in_ls = false;
@@ -55,7 +49,7 @@ fn part_one(s: &str) -> String {
         inums: vec![],
     }));
 
-    for line in input {
+    for line in input.lines() {
         let words: Vec<&str> = line.split(' ').collect();
         match (in_ls, words[0], words[1]) {
             (_, "$", "cd") if words[2] == ".." => {
@@ -121,6 +115,13 @@ fn part_one(s: &str) -> String {
         }
     }
 
+    Ok(ilist)
+}
+
+fn part_one(s: &str) -> String {
+    let input = parse_input(s).unwrap();
+    let ilist = input;
+
     ilist
         .iter()
         .filter_map(|inode| match inode {
@@ -140,8 +141,25 @@ fn part_one(s: &str) -> String {
 
 fn part_two(s: &str) -> String {
     let input = parse_input(s).unwrap();
+    let ilist = input;
+    let disk_capacity = 70_000_000;
+    let required_unused_space = 30_000_000;
 
-    "".to_string()
+    let total_used_space = ilist[0].total_size(&ilist);
+    let unused_space = disk_capacity - total_used_space;
+    let space_to_delete = required_unused_space - unused_space;
+
+    ilist
+        .iter()
+        .map(|inode| (inode, inode.total_size(&ilist)))
+        .filter(|&(inode, size)| match inode {
+            Inode::File(_) => false,
+            _ => size >= space_to_delete,
+        })
+        .min_by(|(_, a), (_, b)| a.cmp(b))
+        .map(|(_, size)| size)
+        .unwrap()
+        .to_string()
 }
 
 fn main() -> Result<()> {
@@ -158,5 +176,5 @@ mod test {
     use aocutil::test_example;
 
     test_example!(example_7_1, part_one, 7, 1, 1);
-    //test_example!(example_7_2, part_two, 7, 2, 1);
+    test_example!(example_7_2, part_two, 7, 2, 1);
 }
