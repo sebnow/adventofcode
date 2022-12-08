@@ -85,6 +85,10 @@ where
         self.coords.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.coords.is_empty()
+    }
+
     /// Return cells surrounding `p` according to `mask`. The `mask` bit positions map to cells in
     /// row-major order starting with the most significant bit, omitting the middle point `p`.
     ///
