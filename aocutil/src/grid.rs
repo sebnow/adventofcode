@@ -74,11 +74,11 @@ where
     }
 
     pub fn rows(&self) -> usize {
-        (self.y_bounds.1 - self.y_bounds.0) as usize
+        (self.y_bounds.1 - self.y_bounds.0 + 1) as usize
     }
 
     pub fn cols(&self) -> usize {
-        (self.x_bounds.1 - self.x_bounds.0) as usize
+        (self.x_bounds.1 - self.x_bounds.0 + 1) as usize
     }
 
     pub fn len(&self) -> usize {
