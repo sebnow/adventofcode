@@ -211,6 +211,22 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fmt::Write;
+
+    #[derive(Debug, Clone, Copy, PartialEq)]
+    struct CharCell(char);
+
+    impl std::fmt::Display for CharCell {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_char(self.0)
+        }
+    }
+
+    impl Default for CharCell {
+        fn default() -> Self {
+            Self(' ')
+        }
+    }
 
     #[derive(Clone, Copy, Default, PartialEq)]
     struct Collidable<T>(T, bool);
@@ -224,11 +240,11 @@ mod tests {
     #[test]
     fn display_coords() {
         let mut g = Grid::default();
-        g.insert(Point::new(0, 0), "a");
-        g.insert(Point::new(2, 0), "b");
-        g.insert(Point::new(1, -1), "c");
-        g.insert(Point::new(0, -2), "d");
-        g.insert(Point::new(2, -2), "e");
+        g.insert(Point::new(0, 0), CharCell('a'));
+        g.insert(Point::new(2, 0), CharCell('b'));
+        g.insert(Point::new(1, -1), CharCell('c'));
+        g.insert(Point::new(0, -2), CharCell('d'));
+        g.insert(Point::new(2, -2), CharCell('e'));
 
         assert_eq!(
             r#"a b
