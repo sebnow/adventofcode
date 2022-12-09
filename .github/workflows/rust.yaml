@@ -37,4 +37,3 @@ jobs:
       - name: Test (${{ matrix.dir }})
         run: cargo test --verbose
         working-directory: ${{ matrix.dir }}
-        continue-on-error: true
