@@ -28,13 +28,13 @@ fn in_line_of_sight(height_map: &Grid, p: &Point) -> bool {
     (0..p.x)
         .filter_map(|x| height_map.get(&Point::new(x, p.y)))
         .all(is_lower)
-        || (p.x + 1..height_map.rows() as i64)
+        || (p.x + 1..=height_map.rows() as i64)
             .filter_map(|x| height_map.get(&Point::new(x, p.y)))
             .all(is_lower)
         || (0..p.y)
             .filter_map(|y| height_map.get(&Point::new(p.x, y)))
             .all(is_lower)
-        || (p.y + 1..height_map.cols() as i64)
+        || (p.y + 1..=height_map.cols() as i64)
             .filter_map(|y| height_map.get(&Point::new(p.x, y)))
             .all(is_lower)
 }
@@ -67,7 +67,7 @@ fn scenic_score(height_map: &Grid, p: &Point) -> usize {
 
     let mut right = 0;
     for other_h in
-        (p.x + 1..height_map.rows() as i64).filter_map(|x| height_map.get(&Point::new(x, p.y)))
+        (p.x + 1..=height_map.rows() as i64).filter_map(|x| height_map.get(&Point::new(x, p.y)))
     {
         right += 1;
         if is_blocking(other_h) {
@@ -88,7 +88,7 @@ fn scenic_score(height_map: &Grid, p: &Point) -> usize {
 
     let mut down = 0;
     for other_h in
-        (p.y + 1..height_map.cols() as i64).filter_map(|y| height_map.get(&Point::new(p.x, y)))
+        (p.y + 1..=height_map.cols() as i64).filter_map(|y| height_map.get(&Point::new(p.x, y)))
     {
         down += 1;
         if is_blocking(other_h) {

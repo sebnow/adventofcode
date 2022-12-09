@@ -8,6 +8,7 @@ pub trait Collision {
 
 pub type Point = euclid::Point2D<i64, euclid::UnknownUnit>;
 pub type Vector = euclid::Vector2D<i64, euclid::UnknownUnit>;
+type Box = euclid::Box2D<i64, euclid::UnknownUnit>;
 
 pub const MASK_CROSSHAIR: u8 = 0b01011010;
 pub const MASK_ALL: u8 = 0b11111111;
@@ -15,16 +16,14 @@ pub const MASK_ALL: u8 = 0b11111111;
 #[derive(Default, Debug, PartialEq, Clone)]
 pub struct Grid<T> {
     coords: HashMap<Point, T>,
-    x_bounds: (i64, i64),
-    y_bounds: (i64, i64),
+    bounds: Box,
 }
 
 impl<T> Grid<T> {
     pub fn new() -> Self {
         Grid {
             coords: HashMap::default(),
-            x_bounds: (0, 0),
-            y_bounds: (0, 0),
+            bounds: Default::default(),
         }
     }
 }
@@ -47,8 +46,7 @@ where
 
     pub fn insert(&mut self, p: Point, v: T) {
         self.coords.insert(p, v);
-        self.x_bounds = (self.x_bounds.0.min(p.x), self.x_bounds.1.max(p.x));
-        self.y_bounds = (self.y_bounds.0.min(p.y), self.y_bounds.1.max(p.y));
+        self.bounds = Box::from_points([self.bounds.min, self.bounds.max, p]);
     }
 
     pub fn remove(&mut self, p: &Point) -> Option<T> {
@@ -74,11 +72,11 @@ where
     }
 
     pub fn rows(&self) -> usize {
-        (self.y_bounds.1 - self.y_bounds.0 + 1) as usize
+        self.bounds.height() as usize
     }
 
     pub fn cols(&self) -> usize {
-        (self.x_bounds.1 - self.x_bounds.0 + 1) as usize
+        self.bounds.width() as usize
     }
 
     pub fn len(&self) -> usize {
@@ -104,17 +102,8 @@ where
     }
 
     fn reset_bounds(&mut self) {
-            let mut x_bounds = (0, 0);
-            let mut y_bounds = (0, 0);
-
-            for p in self.coords.keys() {
-                x_bounds = (x_bounds.0.min(p.x), x_bounds.1.max(p.x));
-                y_bounds = (y_bounds.0.min(p.y), y_bounds.1.max(p.y));
-            }
-
-            self.x_bounds = x_bounds;
-            self.y_bounds = y_bounds;
-        }
+        self.bounds = Box::from_points(self.coords.keys());
+    }
 }
 
 impl<T> std::fmt::Display for Grid<T>
@@ -122,8 +111,8 @@ where
     T: std::fmt::Display + std::default::Default,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for y in (self.y_bounds.0..=self.y_bounds.1).rev() {
-            for x in self.x_bounds.0..=self.x_bounds.1 {
+        for y in (self.bounds.min.y..=self.bounds.max.y).rev() {
+            for x in self.bounds.min.x..=self.bounds.max.x {
                 if let Some(x) = self.coords.get(&Point::new(x as i64, y as i64)) {
                     write!(f, "{}", x)?;
                 } else {
@@ -131,7 +120,7 @@ where
                 }
             }
 
-            if y != self.y_bounds.0 {
+            if y != self.bounds.min.y {
                 writeln!(f)?;
             }
         }
