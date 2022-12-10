@@ -40,16 +40,11 @@ fn part_one(s: &str) -> String {
     let input = parse_input(s).unwrap();
     let cycles = process(input);
 
-    let signal_strength: i64 = 20 * cycles[19]
-        + cycles
-            .iter()
-            .enumerate()
-            .skip(59)
-            .step_by(40)
-            .map(|(cycle, x)| (cycle as i64 + 1) * x)
-            .sum::<i64>();
-
-    signal_strength.to_string()
+    std::iter::once((19, &cycles[19]))
+        .chain(cycles.iter().enumerate().skip(59).step_by(40))
+        .map(|(cycle, x)| (cycle as i64 + 1) * x)
+        .sum::<i64>()
+        .to_string()
 }
 
 fn part_two(s: &str) -> String {
