@@ -1,0 +1,5 @@
+(executable
+ (public_name aoc2023)
+ (name day01)
+ (libraries aoc2023 core ppx_sexp_message)
+ (preprocess (pps ppx_sexp_message)))
