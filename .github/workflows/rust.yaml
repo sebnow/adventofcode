@@ -34,7 +34,7 @@ jobs:
       - uses: Swatinem/rust-cache@v1
       - name: Build (${{ matrix.dir }})
         run: cargo build --verbose
-        working-directory: ${{ matrix.dir }}
+        working-directory: rust/${{ matrix.dir }}
       - name: Test (${{ matrix.dir }})
         run: cargo test --verbose
-        working-directory: ${{ matrix.dir }}
+        working-directory: rust/${{ matrix.dir }}
