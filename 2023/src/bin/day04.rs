@@ -74,10 +74,10 @@ fn part_two(s: &str) -> String {
     let input = parse_input(s);
     let matches = input.iter().map(Card::matches).collect::<Vec<_>>();
     let mut counts: Vec<usize> = input.iter().map(|_| 0).collect();
-    let mut queue: VecDeque<(usize, &usize)> = matches.iter().enumerate().collect();
+    let mut queue: VecDeque<usize> = (0..matches.len()).collect();
 
-    while let Some((idx, &matched)) = queue.pop_front() {
-        queue.extend((idx + 1..=idx + matched).map(|idx| (idx, &matches[idx])));
+    while let Some(idx) = queue.pop_front() {
+        queue.extend(idx + 1..=idx + matches[idx]);
         counts[idx] += 1;
     }
 
