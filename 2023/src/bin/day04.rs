@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, iter::repeat};
 
 use anyhow::Result;
 
@@ -62,13 +62,12 @@ fn part_one(s: &str) -> String {
 
 fn part_two(s: &str) -> String {
     let input = parse_input(s);
-    let matches = input.iter().map(Card::matches).collect::<Vec<_>>();
-    let mut counts: Vec<usize> = input.iter().map(|_| 0).collect();
-    let mut queue: VecDeque<usize> = (0..matches.len()).collect();
+    let mut counts: Vec<usize> = repeat(1).take(input.len()).collect();
 
-    while let Some(idx) = queue.pop_front() {
-        queue.extend(idx + 1..=idx + matches[idx]);
-        counts[idx] += 1;
+    for (idx, card) in input.iter().enumerate() {
+        for copied in idx + 1..=idx + card.matches() {
+            counts[copied] += counts[idx];
+        }
     }
 
     counts.iter().sum::<usize>().to_string()
