@@ -4,7 +4,6 @@ use anyhow::Result;
 
 #[derive(Debug)]
 struct Card {
-    id: usize,
     winning: Vec<u8>,
     numbers: Vec<u8>,
 }
@@ -33,19 +32,10 @@ fn parse_nums(s: &str) -> Vec<u8> {
 fn parse_input(s: &str) -> Vec<Card> {
     s.lines()
         .map(|l| {
-            let (left, right) = l.split_once(": ").expect("invalid card");
-            let id = left
-                .split_once(' ')
-                .expect("missing card id")
-                .1
-                .trim_start()
-                .parse()
-                .expect("invalid card id");
-
+            let (_, right) = l.split_once(": ").expect("invalid card");
             let (win_side, num_side) = right.split_once(" | ").expect("invalid numbers");
 
             Card {
-                id,
                 winning: parse_nums(win_side),
                 numbers: parse_nums(num_side),
             }
