@@ -33,6 +33,10 @@
           inherit inputs pkgs;
           modules = [
             {
+              packages = with pkgs; [
+                gnumake
+                curl
+              ];
               languages.rust.enable = true;
             }
           ];
