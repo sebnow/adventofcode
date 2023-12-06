@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use anyhow::Result;
 use itertools::Itertools;
 
@@ -116,8 +118,9 @@ fn part_two(s: &str) -> String {
         .into_iter()
         .fold(ranges, |ranges, map| {
             let mut new_ranges = Vec::with_capacity(ranges.len());
+            let mut queue = VecDeque::from(ranges);
 
-            for r in &ranges {
+            while let Some(r) = queue.pop_front() {
                 let mut found = false;
                 for c in &map.conversions {
                     if r.end < c.source.start || r.start > c.source.end - 1 {
@@ -137,14 +140,14 @@ fn part_two(s: &str) -> String {
                     // FIXME: This breaks the example input. Apparently the remainder should be
                     // tried against other conversions instead of breaking.
                     if r.end > c.source.end {
-                        new_ranges.push(Range::new(c.source.end, r.end + 1));
+                        queue.push_front(Range::new(c.source.end, r.end + 1));
                     }
 
                     break;
                 }
 
                 if !found {
-                    new_ranges.push(*r);
+                    new_ranges.push(r);
                 }
             }
 
