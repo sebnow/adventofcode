@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
     systems.url = "github:nix-systems/default";
     devenv.url = "github:cachix/devenv";
   };
@@ -28,12 +28,27 @@
       forEachSystem
       (system: let
         pkgs = nixpkgs.legacyPackages.${system};
+        ocamlPackages = pkgs.ocaml-ng.ocamlPackages;
       in {
         default = devenv.lib.mkShell {
           inherit inputs pkgs;
           modules = [
             {
               languages.rust.enable = true;
+              packages = [pkgs.heaptrack];
+            }
+            rec {
+              languages.ocaml = {
+                enable = true;
+                packages = pkgs.ocaml-ng.ocamlPackages_4_12;
+              };
+              packages = [
+                pkgs.opam
+              ];
+
+              enterShell = ''
+                eval $(opam env --switch=default)
+              '';
             }
           ];
         };
