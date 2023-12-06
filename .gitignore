@@ -1,2 +1,3 @@
-target/
+/input
 /.devenv
+target/
