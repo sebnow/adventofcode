@@ -3,19 +3,23 @@ use std::{cmp::Ordering, str::FromStr, unreachable};
 use anyhow::Result;
 use itertools::Itertools;
 
-const STRENGTH: [char; 13] = [
+const STRENGTH_P1: [char; 13] = [
     '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A',
 ];
+const STRENGTH_P2: [char; 13] = [
+    'J', '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'Q', 'K', 'A',
+];
 
-#[derive(Eq, PartialEq, Clone, Copy, Hash)]
+#[derive(Eq, PartialEq, Clone, Copy, Hash, Debug)]
 struct Card(char);
 
 impl Card {
     fn strength(&self) -> usize {
-        STRENGTH.iter().position(|&c| c == self.0).unwrap()
+        STRENGTH_P1.iter().position(|&c| c == self.0).unwrap()
     }
 }
 
+#[derive(Debug)]
 struct Hand {
     cards: [Card; 5],
 }
@@ -87,7 +91,41 @@ fn part_one(s: &str) -> String {
 fn part_two(s: &str) -> String {
     let input = parse_input(s);
 
-    "".to_string()
+    let mut hands = input
+        .into_iter()
+        .map(|(h, bid)| {
+            let mut counts = h.cards.into_iter().filter(|&c| c != Card('J')).counts();
+            if counts.is_empty() {
+                counts.insert(Card('J'), 5);
+            }
+
+            let mut strength = counts.values().copied().collect_vec();
+            strength.sort();
+            strength.reverse();
+            strength[0] += 5 - strength.iter().sum::<usize>();
+            strength.extend(
+                h.cards
+                    .iter()
+                    .map(|c| STRENGTH_P2.iter().position(|&x| x == c.0).unwrap()),
+            );
+
+            let s = strength.iter().fold(
+                0,
+                |acc, &x| if x >= 10 { acc * 100 + x } else { acc * 10 + x },
+            );
+
+            (h, bid, s)
+        })
+        .collect_vec();
+
+    hands.sort_by_key(|&(_, _, s)| s);
+
+    hands
+        .into_iter()
+        .enumerate()
+        .map(|(rank, (_, bid, _))| (rank + 1) as u64 * bid)
+        .sum::<u64>()
+        .to_string()
 }
 
 fn main() -> Result<()> {
