@@ -1,5 +1,4 @@
 use anyhow::Result;
-use itertools::Itertools;
 
 type Values = [char; 13];
 const STRENGTH_P1: Values = [
@@ -19,37 +18,42 @@ fn parse_input(s: &str) -> impl Iterator<Item = (Hand, u64)> {
 }
 
 fn solve<'a, I: Iterator<Item = (Hand<'a>, u64)>>(input: I, values: Values) -> u64 {
-    input
-        .map(|(h, bid)| {
-            let mut counts: [usize; 13] = [0; 13];
-            for c in h.chars() {
-                let p = values.iter().position(|&x| x == c).unwrap();
-                counts[p] += 1;
-            }
+    let mut counts: [usize; 13] = [0; 13];
+    let mut results = Vec::with_capacity(1000);
+    let mut strength = Vec::new();
 
-            // For part 1: No jokers will be removed, and thus none will be added.
-            // For part 2: Remove the jokers to add to the highest value card.
-            if values[0] == 'J' && counts[0] != 5 {
-                counts[0] = 0;
-            }
+    for (h, bid) in input {
+        for c in h.chars() {
+            let p = values.iter().position(|&x| x == c).unwrap();
+            counts[p] += 1;
+        }
 
-            let mut strength = counts
-                .into_iter()
-                .filter(|&x| x > 0)
-                .sorted()
-                .rev()
-                .collect_vec();
-            strength[0] += h.len() - strength.iter().sum::<usize>();
-            strength.extend(
-                h.chars()
-                    .map(|c| values.iter().position(|&x| x == c).unwrap()),
-            );
+        // For part 1: No jokers will be removed, and thus none will be added.
+        // For part 2: Remove the jokers to add to the highest value card.
+        if values[0] == 'J' && counts[0] != 5 {
+            counts[0] = 0;
+        }
 
-            (h, bid, strength)
-        })
-        .sorted_by_key(|(_, _, s)| s.clone())
+        strength.extend(counts.into_iter().filter(|&x| x > 0));
+        strength.sort();
+        strength.reverse();
+        strength[0] += h.len() - strength.iter().sum::<usize>();
+        strength.extend(
+            h.chars()
+                .map(|c| values.iter().position(|&x| x == c).unwrap()),
+        );
+
+        results.push((bid, strength.clone()));
+
+        counts.fill(0);
+        strength.clear();
+    }
+
+    results.sort_by(|(_, a), (_, b)| a.cmp(b));
+    results
+        .into_iter()
         .enumerate()
-        .map(|(rank, (_, bid, _))| (rank + 1) as u64 * bid)
+        .map(|(rank, (bid, _))| (rank + 1) as u64 * bid)
         .sum::<u64>()
 }
 
