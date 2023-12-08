@@ -10,3 +10,4 @@ edition = "2021"
 anyhow = "1.0.51"
 aocutil = {path = "../aocutil"}
 itertools = "0.10.5"
+num = "0.4.1"
