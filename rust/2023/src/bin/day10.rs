@@ -105,7 +105,7 @@ fn is_point_inside_polygon(p: &Point, polygon: &[Point]) -> bool {
 }
 
 fn parse_input(s: &str) -> Grid {
-    s.parse()
+    s.parse().unwrap()
 }
 
 fn part_one(s: &str) -> String {

@@ -143,20 +143,20 @@ where
 
 impl<T> std::str::FromStr for Grid<T>
 where
-    T: From<char> + PartialEq,
+    T: std::convert::TryFrom<char> + PartialEq,
 {
-    type Err = anyhow::Error;
+    type Err = T::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(s.lines()
+        s.lines()
             .rev()
             .enumerate()
             .flat_map(move |(y, l)| {
                 l.chars()
                     .enumerate()
-                    .map(move |(x, c)| (Point::new(x as i64, y as i64), T::from(c)))
+                    .map(move |(x, c)| Ok((Point::new(x as i64, y as i64), T::try_from(c)?)))
             })
-            .collect())
+            .collect::<Result<Grid<T>, T::Error>>()
     }
 }
 
