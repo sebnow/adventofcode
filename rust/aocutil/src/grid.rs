@@ -43,7 +43,9 @@ where
             })
             .collect()
     }
+}
 
+impl<T> Grid<T> {
     pub fn insert(&mut self, p: Point, v: T) {
         self.coords.insert(p, v);
         self.bounds = Box::from_points([self.bounds.min, self.bounds.max, p]);
@@ -113,7 +115,7 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for y in (self.bounds.min.y..=self.bounds.max.y).rev() {
             for x in self.bounds.min.x..=self.bounds.max.x {
-                if let Some(x) = self.coords.get(&Point::new(x as i64, y as i64)) {
+                if let Some(x) = self.coords.get(&Point::new(x, y)) {
                     write!(f, "{}", x)?;
                 } else {
                     write!(f, "{}", T::default())?;
