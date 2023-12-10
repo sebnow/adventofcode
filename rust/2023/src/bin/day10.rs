@@ -105,15 +105,7 @@ fn is_point_inside_polygon(p: &Point, polygon: &[Point]) -> bool {
 }
 
 fn parse_input(s: &str) -> Grid {
-    s.lines()
-        .rev()
-        .enumerate()
-        .flat_map(move |(y, l)| {
-            l.chars()
-                .enumerate()
-                .map(move |(x, c)| (Point::new(x as i64, y as i64), c))
-        })
-        .collect()
+    s.parse()
 }
 
 fn part_one(s: &str) -> String {

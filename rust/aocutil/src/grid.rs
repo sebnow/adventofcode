@@ -132,7 +132,7 @@ where
 
 impl<T> FromIterator<(Point, T)> for Grid<T>
 where
-    T: PartialEq + std::marker::Copy,
+    T: PartialEq,
 {
     fn from_iter<I: IntoIterator<Item = (Point, T)>>(iter: I) -> Self {
         let mut g = Grid::new();
@@ -141,9 +141,28 @@ where
     }
 }
 
+impl<T> std::str::FromStr for Grid<T>
+where
+    T: From<char> + PartialEq,
+{
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(s.lines()
+            .rev()
+            .enumerate()
+            .flat_map(move |(y, l)| {
+                l.chars()
+                    .enumerate()
+                    .map(move |(x, c)| (Point::new(x as i64, y as i64), T::from(c)))
+            })
+            .collect())
+    }
+}
+
 impl<T> Extend<(Point, T)> for Grid<T>
 where
-    T: PartialEq + std::marker::Copy,
+    T: PartialEq,
 {
     fn extend<I: IntoIterator<Item = (Point, T)>>(&mut self, iter: I) {
         for (p, c) in iter {
