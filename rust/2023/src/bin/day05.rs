@@ -137,8 +137,6 @@ fn part_two(s: &str) -> String {
                     let end = r.end.min(c.source.end) as i64 + c.offset();
                     new_ranges.push(Range::new(start as u64, end as u64));
 
-                    // FIXME: This breaks the example input. Apparently the remainder should be
-                    // tried against other conversions instead of breaking.
                     if r.end > c.source.end {
                         queue.push_front(Range::new(c.source.end, r.end + 1));
                     }
