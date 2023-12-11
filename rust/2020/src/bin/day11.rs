@@ -1,18 +1,13 @@
 use anyhow::{anyhow, Result};
 use aocutil::{Point, MASK_ALL};
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
 
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy, Default)]
 enum Tile {
     Floor,
-    Empty,
     Occupied,
-}
-
-impl Default for Tile {
-    fn default() -> Self {
-        Tile::Empty
-    }
+    #[default]
+    Empty,
 }
 
 type Grid = aocutil::Grid<Tile>;
@@ -85,15 +80,7 @@ fn visible(g: &Grid, p: &Point) -> Vec<(Point, Tile)> {
 }
 
 fn parse_input(s: &str) -> Result<Grid> {
-    let mut g = Grid::default();
-
-    for (y, l) in s.lines().enumerate() {
-        for (x, c) in l.chars().enumerate() {
-            g.insert(Point::new(x as i64, 0 - y as i64), c.try_into()?)
-        }
-    }
-
-    Ok(g)
+    s.parse()
 }
 
 fn part_one(input: &str) -> String {
@@ -105,10 +92,7 @@ fn part_one(input: &str) -> String {
         for (&p, t) in prev.iter() {
             let occupied = prev
                 .surrounding(&p, MASK_ALL)
-                .filter(|(_, t)| match t {
-                    Tile::Occupied => true,
-                    _ => false,
-                })
+                .filter(|(_, t)| matches!(t, Tile::Occupied))
                 .count();
 
             grid.insert(
@@ -136,10 +120,7 @@ fn part_one(input: &str) -> String {
         if grid == prev {
             return grid
                 .iter()
-                .filter(|(_, &s)| match s {
-                    Tile::Occupied => true,
-                    _ => false,
-                })
+                .filter(|(_, &s)| matches!(s, Tile::Occupied))
                 .count()
                 .to_string();
         }
@@ -156,10 +137,7 @@ fn part_two(input: &str) -> String {
         for (&p, t) in prev.iter() {
             let occupied = visible(&prev, &p)
                 .iter()
-                .filter(|(_, t)| match t {
-                    Tile::Occupied => true,
-                    _ => false,
-                })
+                .filter(|(_, t)| matches!(t, Tile::Occupied))
                 .count();
 
             grid.insert(
@@ -187,10 +165,7 @@ fn part_two(input: &str) -> String {
         if grid == prev {
             return grid
                 .iter()
-                .filter(|(_, &s)| match s {
-                    Tile::Occupied => true,
-                    _ => false,
-                })
+                .filter(|(_, &s)| matches!(s, Tile::Occupied))
                 .count()
                 .to_string();
         }
@@ -200,8 +175,8 @@ fn part_two(input: &str) -> String {
 
 fn main() -> Result<()> {
     let input = include_str!("../../../../input/2020/day11.txt");
-    println!("Part one: {}", part_one(&input));
-    println!("Part two: {}", part_two(&input));
+    println!("Part one: {}", part_one(input));
+    println!("Part two: {}", part_two(input));
 
     Ok(())
 }
