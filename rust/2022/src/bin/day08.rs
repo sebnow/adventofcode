@@ -5,20 +5,7 @@ type Height = u32;
 type Grid = aocutil::Grid<Height>;
 
 fn parse_input(s: &str) -> Result<Grid> {
-    s.lines()
-        .rev()
-        .enumerate()
-        .flat_map(|(y, l)| {
-            l.chars().enumerate().map(move |(x, c)| {
-                Ok((
-                    Point::new(x as i64, y as i64),
-                    c.to_digit(10)
-                        .with_context(|| "failed to parse tree height")?
-                        as Height,
-                ))
-            })
-        })
-        .collect()
+    s.parse().with_context(|| "parsing grid")
 }
 
 fn in_line_of_sight(height_map: &Grid, p: &Point) -> bool {

@@ -2,22 +2,28 @@ use aocutil::{Point, MASK_ALL};
 use std::collections::{HashSet, VecDeque};
 
 type Grid = aocutil::Grid<OctopusEnergy>;
-type OctopusEnergy = u8;
 
-const FLASH_ENERGY: OctopusEnergy = 10;
+#[derive(PartialEq, PartialOrd, Clone, Copy)]
+struct OctopusEnergy(u32);
+
+impl std::convert::From<char> for OctopusEnergy {
+    fn from(value: char) -> Self {
+        OctopusEnergy(value.to_digit(10).unwrap())
+    }
+}
+
+impl std::ops::Deref for OctopusEnergy {
+    type Target = u32;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+const FLASH_ENERGY: OctopusEnergy = OctopusEnergy(10);
 
 fn parse_input(s: &str) -> Grid {
-    s.lines()
-        .enumerate()
-        .flat_map(|(y, l)| {
-            l.chars().enumerate().map(move |(x, c)| {
-                (
-                    Point::new(x as i64, 0 - y as i64),
-                    c.to_digit(10).expect("digit") as OctopusEnergy,
-                )
-            })
-        })
-        .collect()
+    s.parse().unwrap()
 }
 
 fn step(old: &Grid) -> (Grid, usize) {
@@ -25,7 +31,10 @@ fn step(old: &Grid) -> (Grid, usize) {
     let mut flashed: HashSet<Point> = HashSet::new();
 
     // Increase by one
-    let mut grid: Grid = old.iter().map(|(&p, o)| (p, o + 1)).collect();
+    let mut grid: Grid = old
+        .iter()
+        .map(|(&p, o)| (p, OctopusEnergy(o.0 + 1)))
+        .collect();
 
     // Increase those surrounding 10
     loop {
@@ -45,7 +54,7 @@ fn step(old: &Grid) -> (Grid, usize) {
             let surr: Vec<_> = grid.surrounding(&p, MASK_ALL).map(|x| x.0).collect();
             for s in surr {
                 let o = grid.get_mut(&s).unwrap();
-                *o += 1;
+                o.0 += 1;
             }
         }
     }
@@ -53,7 +62,7 @@ fn step(old: &Grid) -> (Grid, usize) {
     // Reset all with 10 to 0
     for p in &flashed {
         let o = grid.get_mut(p).unwrap();
-        *o = 0;
+        o.0 = 0;
     }
 
     (grid, flashed.len())

@@ -1,17 +1,24 @@
+use anyhow::Context;
 use std::collections::{HashSet, VecDeque};
 
 use aocutil::{Point, MASK_CROSSHAIR};
 use itertools::Itertools;
 
-type Grid = aocutil::Grid<u32>;
+type Grid = aocutil::Grid<Digit>;
+
+#[derive(Clone, Copy, PartialEq, PartialOrd)]
+struct Digit(u32);
+
+impl std::convert::TryFrom<char> for Digit {
+    type Error = anyhow::Error;
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        Ok(Digit(value.to_digit(10).context("invalid digit")?))
+    }
+}
 
 fn parse_input(s: &str) -> Grid {
-    let v: Vec<Vec<_>> = s
-        .lines()
-        .map(|l| l.chars().map(|c| c.to_digit(10).unwrap()).collect())
-        .collect();
-
-    Grid::from_vec2d(v)
+    s.parse().unwrap()
 }
 
 fn part_one(s: &str) -> String {
@@ -21,7 +28,7 @@ fn part_one(s: &str) -> String {
         .iter()
         .filter_map(|(&p, &x)| {
             if grid.surrounding(&p, MASK_CROSSHAIR).all(|(_, &y)| x < y) {
-                Some(x + 1)
+                Some(x.0 + 1)
             } else {
                 None
             }
@@ -46,7 +53,7 @@ impl Basin {
 
             self.queue
                 .extend(grid.surrounding(&p, MASK_CROSSHAIR).filter_map(|(p, &x)| {
-                    if x < 9 {
+                    if x.0 < 9 {
                         Some(p)
                     } else {
                         None
