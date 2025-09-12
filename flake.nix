@@ -25,6 +25,11 @@
               cargo
             ];
           };
+          devShells.zig = pkgs.mkShell {
+            buildInputs = with pkgs; [
+              zig
+            ];
+          };
         };
     };
 }
